@@ -1,0 +1,2 @@
+# optix7_advance_PKUcourse
+基于optix7course框架实现的sponza场景
