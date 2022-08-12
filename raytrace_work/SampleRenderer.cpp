@@ -624,7 +624,7 @@ namespace osc {
     denoiserIntensity.resize(sizeof(float));
 
     OptixDenoiserParams denoiserParams;
-    denoiserParams.denoiseAlpha = 1;
+    denoiserParams.denoiseAlpha = static_cast<OptixDenoiserAlphaMode>(1);
 #if OPTIX_VERSION >= 70300
     if (denoiserIntensity.sizeInBytes != sizeof(float))
         denoiserIntensity.alloc(sizeof(float));
