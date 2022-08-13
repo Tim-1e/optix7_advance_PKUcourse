@@ -12,10 +12,9 @@ namespace osc {
     SampleWindow(const std::string &title,
                  const Model *model,
                  const Camera &camera,
-                 const QuadLight &light,
                  const float worldScale)
       : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
-        sample(model,light)
+        sample(model)
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
@@ -181,22 +180,22 @@ namespace osc {
 #endif
                              ); 
       Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                        /* at */model->bounds.center()-vec3f(0,400,0),
-                        /* up */vec3f(0.f,1.f,0.f) };
+                                      /* at */model->bounds.center()-vec3f(0,400,0),
+                                      /* up */vec3f(0.f,1.f,0.f) };
 
       // some simple, hard-coded light ... obviously, only works for sponza
-      const float light_size = 200.f;
-      QuadLight light = { /* origin */ vec3f(-500,800,0),
-                          /* edge 1 */ vec3f(2.f*light_size,0,0),
-                          /* edge 2 */ vec3f(0,0,2.f*light_size),
-                          /* power */  vec3f(3000000.f) };
+      //const float light_size = 200.f;
+      //QuadLight light = { /* origin */ vec3f(-500,800,0),
+      //                    /* edge 1 */ vec3f(2.f*light_size,0,0),
+      //                    /* edge 2 */ vec3f(0,0,2.f*light_size),
+      //                    /* power */  vec3f(3000000.f) };
                       
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
       const float worldScale = length(model->bounds.span());
 
       SampleWindow *window = new SampleWindow("Optix 7 Course Example",
-                                              model,camera,light,worldScale);
+                                              model,camera,worldScale);
       window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;

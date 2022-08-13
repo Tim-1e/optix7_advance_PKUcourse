@@ -35,15 +35,16 @@ namespace osc {
 
   /*! constructor - performs all setup, including initializing
     optix, creates module, pipeline, programs, SBT, etc. */
-  SampleRenderer::SampleRenderer(const Model *model, const QuadLight &light)
+  SampleRenderer::SampleRenderer(const Model *model)
     : model(model)
   {
     initOptix();
 
-    launchParams.light.origin = light.origin;
-    launchParams.light.du     = light.du;
-    launchParams.light.dv     = light.dv;
-    launchParams.light.power  = light.power;
+    // 光源部分： 目前就这么一点点，而且实际上用不到
+    //launchParams.light.origin = light.origin;
+    //launchParams.light.du     = light.du;
+    //launchParams.light.dv     = light.dv；
+    //launchParams.light.power  = light.power;
 
     std::cout << "#osc: creating optix context ..." << std::endl;
     createContext();
@@ -322,8 +323,6 @@ namespace osc {
                 (optixContext,context_log_cb,nullptr,4));
   }
 
-
-
   /*! creates the module that contains all the programs we are going
     to use. in this simple example, we use a single module from a
     single .cu file, using a single embedded ptx string */
@@ -358,8 +357,6 @@ namespace osc {
     if (sizeof_log > 1) PRINT(log);
   }
     
-
-
   /*! does all setup for the raygen program(s) we are going to use */
   void SampleRenderer::createRaygenPrograms()
   {
@@ -476,7 +473,6 @@ namespace osc {
     if (sizeof_log > 1) PRINT(log);
   }
     
-
   /*! assembles the full pipeline of all programs */
   void SampleRenderer::createPipeline()
   {
@@ -518,7 +514,6 @@ namespace osc {
                  1));
     if (sizeof_log > 1) PRINT(log);
   }
-
 
   /*! constructs the shader binding table */
   void SampleRenderer::buildSBT()
@@ -594,8 +589,6 @@ namespace osc {
     sbt.hitgroupRecordStrideInBytes = sizeof(HitgroupRecord);
     sbt.hitgroupRecordCount         = (int)hitgroupRecords.size();
   }
-
-
 
   /*! render one frame */
   void SampleRenderer::render()

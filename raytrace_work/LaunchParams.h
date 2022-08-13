@@ -18,6 +18,7 @@
 
 #include "gdt/math/vec.h"
 #include "optix7.h"
+// #include "LightParams.h"
 
 namespace osc {
   using namespace gdt;
@@ -64,10 +65,14 @@ namespace osc {
       vec3f vertical;
     } camera;
 
+    //LightParams* light;
+    //int lightNum;
+    // This old struct is neccesary for memory allocation
+    // Don't know how to get rid of it
     struct {
-      vec3f origin, du, dv, power;
+        vec3f origin, du, dv, power;
     } light;
-    
+
     OptixTraversableHandle traversable;
   };
 

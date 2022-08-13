@@ -18,7 +18,7 @@
 #include <cuda_runtime.h>
 
 #include "LaunchParams.h"
-#include "gdt/random/random.h"
+#include "PRD.h"
 
 using namespace osc;
 
@@ -26,23 +26,11 @@ using namespace osc;
 
 namespace osc {
 
-    typedef gdt::LCG<16> Random;
 
     /*! launch parameters in constant memory, filled in by optix upon
         optixLaunch (this gets filled in from the buffer we pass to
         optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
-
-    /*! per-ray data now captures random number generator, so programs
-        can access RNG state */
-    struct PRD {
-        Random random;
-        int depth;
-        vec3f  pixelColor;
-        vec3f  pixelNormal;
-        vec3f  pixelAlbedo;
-        float refraction_index;//当前光线相对于空气的折射率
-    };
 
     static __forceinline__ __device__
         void* unpackPointer(uint32_t i0, uint32_t i1)
@@ -374,6 +362,7 @@ namespace osc {
     {
         PRD& prd = *getPRD<PRD>();
         // set to constant white as background color
+        // 这儿可能要改成环境光
         prd.pixelColor *= vec3f(10.f);
     }
 
