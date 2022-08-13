@@ -69,9 +69,9 @@ namespace osc {
     //int lightNum;
     // This old struct is neccesary for memory allocation
     // Don't know how to get rid of it
-    struct {
+    /*struct {
         vec3f origin, du, dv, power;
-    } light;
+    } light;*/
 
     OptixTraversableHandle traversable;
   };

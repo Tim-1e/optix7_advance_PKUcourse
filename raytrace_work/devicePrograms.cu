@@ -17,6 +17,7 @@
 #include <optix_device.h>
 #include <cuda_runtime.h>
 
+#include "LightParams.h"
 #include "LaunchParams.h"
 #include "PRD.h"
 
