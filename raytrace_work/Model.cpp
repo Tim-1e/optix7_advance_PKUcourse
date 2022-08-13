@@ -204,6 +204,9 @@ namespace osc {
           if (mesh->emission.x + mesh->emission.y + mesh->emission.z > 0.1) mesh->emissive_ = 1;
           mesh->Kr = (const float&)materials[materialID].ior;
           mesh->d= (const float&)materials[materialID].dissolve;
+          mesh->roughness = materials[materialID].roughness;
+          mesh->metallic = materials[materialID].metallic;
+          mesh->sheen = materials[materialID].sheen;
           //if (mesh->specTextureID >= 0)
           //    printf("%d %s\n", mesh->specTextureID,(materials[materialID].specular_texname).c_str());
         }

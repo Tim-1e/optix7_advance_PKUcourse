@@ -41,6 +41,9 @@ namespace osc {
     float alpha_ = 0.f; // shininess constant
     bool emissive_=0;
     vec3f emission = 0.f;
+    float roughness;            
+    float metallic;
+    float sheen;
   };
 
   struct QuadLight {

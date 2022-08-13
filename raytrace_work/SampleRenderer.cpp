@@ -580,12 +580,15 @@ namespace osc {
         rec.data.vertex   = (vec3f*)vertexBuffer[meshID].d_pointer();
         rec.data.normal   = (vec3f*)normalBuffer[meshID].d_pointer();
         rec.data.texcoord = (vec2f*)texcoordBuffer[meshID].d_pointer();
-       rec.data.emission = mesh->emission;
+        rec.data.emission = mesh->emission;
         rec.data.alpha_ = mesh->alpha_;
         rec.data.d= mesh->d;
         rec.data.Kr= mesh->Kr;
         rec.data.emissive_= mesh->emissive_;
         rec.data.ID = mesh->specTextureID;
+        rec.data.roughness = mesh->roughness;
+        rec.data.metallic = mesh->metallic;
+        rec.data.sheen = mesh->sheen;
         hitgroupRecords.push_back(rec);
       }
     }
@@ -623,8 +626,9 @@ namespace osc {
 
     denoiserIntensity.resize(sizeof(float));
 
+    
     OptixDenoiserParams denoiserParams;
-    denoiserParams.denoiseAlpha = 1;
+    denoiserParams.denoiseAlpha = static_cast<OptixDenoiserAlphaMode>(1);
 #if OPTIX_VERSION >= 70300
     if (denoiserIntensity.sizeInBytes != sizeof(float))
         denoiserIntensity.alloc(sizeof(float));
@@ -741,6 +745,7 @@ namespace osc {
                  outputLayer.width*outputLayer.height*sizeof(float4),
                  cudaMemcpyDeviceToDevice);
     }
+    
     computeFinalPixelColors();
     
     // sync - make sure the frame is rendered before we download and

@@ -31,6 +31,7 @@ namespace osc {
     vec3f *normal;
     vec2f *texcoord;
     vec3i *index;
+
     bool  hasTexture;
     int ID;
     vec3f emission;
@@ -38,6 +39,9 @@ namespace osc {
     float d;//refractable
     float Kr;//refraction rate
     float alpha_; // shininess constant
+    float roughness;            
+    float metallic;
+    float sheen;
     cudaTextureObject_t texture;
     bool hasSpecTexture;
     cudaTextureObject_t spectexture;
