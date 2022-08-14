@@ -19,7 +19,7 @@
 
 #include "LightParams.h"
 #include "LaunchParams.h"
-#include "PRD.h"
+#include "tool_function.h"
 
 using namespace osc;
 
@@ -32,129 +32,6 @@ namespace osc {
         optixLaunch (this gets filled in from the buffer we pass to
         optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
-
-    static __forceinline__ __device__
-        void* unpackPointer(uint32_t i0, uint32_t i1)
-    {
-        const uint64_t uptr = static_cast<uint64_t>(i0) << 32 | i1;
-        void* ptr = reinterpret_cast<void*>(uptr);
-        return ptr;
-    }
-
-    static __forceinline__ __device__
-        void  packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
-    {
-        const uint64_t uptr = reinterpret_cast<uint64_t>(ptr);
-        i0 = uptr >> 32;
-        i1 = uptr & 0x00000000ffffffff;
-    }
-
-    template<typename T>
-    static __forceinline__ __device__ T* getPRD()
-    {
-        const uint32_t u0 = optixGetPayload_0();
-        const uint32_t u1 = optixGetPayload_1();
-        return reinterpret_cast<T*>(unpackPointer(u0, u1));
-    }
-
-    /*
-*  Calculates refraction direction
-*  lDir   : refraction vector
-*  i   : incident vector
-*  n   : surface normal
-*  ior : index of refraction ( n2 / n1 )
-*  returns false in case of total internal reflection, in that case lDir is
-*  initialized to (0,0,0).
-*/
-    static __forceinline__  __device__
-        bool refract(vec3f& lDir, vec3f const& i, vec3f const& n, const float ior)
-    {
-        vec3f nn = n;
-        float negNdotV = dot(i, nn);
-        float eta;
-
-        if (negNdotV > 0.0f)
-        {
-            eta = ior;
-            nn = -n;
-            negNdotV = -negNdotV;
-        }
-        else
-        {
-            eta = 1.f / ior;
-        }
-
-        const float k = 1.f - eta * eta * (1.f - negNdotV * negNdotV);
-
-        if (k < 0.0f)
-        {
-            // Initialize this value, so that lDir always leaves this function initialized.
-            lDir = vec3f(0.f);
-            return false;
-        }
-        else
-        {
-            lDir = normalize(eta * i - (eta * negNdotV + sqrtf(k)) * nn);
-            return true;
-        }
-    }
-
-    //Schlick approximation of Fresnel reflectance
-    static __forceinline__  __device__
-        float fresnel_schlick(const float cos_theta, const float exponent = 3.0f,
-            const float minimum = 0.1f, const float maximum = 1.0f)
-    {
-        /*
-          Clamp the result of the arithmetic due to floating point precision:
-          the result should lie strictly within [minimum, maximum]
-          return clamp(minimum + (maximum - minimum) * powf(1.0f - cos_theta, exponent),
-                       minimum, maximum);
-        */
-
-        /* The max doesn'rDir seem like it should be necessary, but without it you get
-            annoying broken pixels at the center of reflective spheres where cos_theta ~ 1.
-        */
-        return clamp(minimum + (maximum - minimum) * powf(fmaxf(0.0f, 1.0f - cos_theta), exponent),
-            minimum, maximum);
-    }
-
-
-    static __forceinline__  __device__
-        vec3f AxisAngle(const vec3f& w, const float cos2theta, const float phi)
-    {
-        const float cos_theta = std::sqrt(cos2theta);
-        const float sin_theta = std::sqrt(1 - cos2theta);
-        const vec3f u = normalize(cross(std::abs(w[0]) > float(.1) ? vec3f(0, 1, 0) : vec3f(1, 0, 0), w));
-        const vec3f v = cross(w, u);
-        return normalize(u * std::cos(phi) * sin_theta + v * std::sin(phi) * sin_theta + w * cos_theta);
-    }
-
-    static __forceinline__  __device__
-        vec3f Sample(const vec3f diffuse, const vec3f spec, const float alpha, const vec3f& n, const vec3f& wi, vec3f& weight)
-    {
-        const float PI_ = 3.1415926535897932384626;
-        const float k_d_ = (diffuse.x + diffuse.y + diffuse.z) / 3;
-        const float k_s_ = (spec.x + spec.y + spec.z) / 3;
-        const float R = k_s_ ? k_d_ / (k_d_ + k_s_) : 1.f;
-        Random x;
-        const float r0 = x();
-        if (r0 < R) { // sample diffuse ray
-            weight = k_d_ ? diffuse / R : vec3f(0, 0, 0);
-            return AxisAngle(n, x(), x() * 2 * PI_);
-        }
-
-        else { // sample specular ray
-            if (0) {
-                const vec3f d = AxisAngle(n * 2 * dot(n, wi) - wi, std::pow(x(), float(2) / (alpha + 2)), x() * 2 * PI_);
-                weight = dot(n, d) <= 0 || !k_s_ ? vec3f(0, 0, 0) : spec / (1 - R);
-                return d;
-            }
-            else { // for ideal mirrors
-                weight = k_s_ ? spec / (1 - R) : vec3f(0, 0, 0);
-                return n * 2 * dot(n, wi) - wi;
-            }
-        }
-    }
 
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
@@ -286,6 +163,7 @@ namespace osc {
                 // the values we store the PRD pointer in:
                 uint32_t u0, u1;
                 packPointer(&newprd, u0, u1);
+                newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
                 newprd.pixelColor = prd.pixelColor * rimportance;
                 newprd.depth = prd.depth + 1;
                 if (prd.refraction_index > 1.f)
@@ -314,9 +192,16 @@ namespace osc {
                 // the values we store the PRD pointer in:
                 PRD newprd;
                 vec3f weight = 1.0f;
-                vec3f mont_dir = Sample(diffuseColor, specColor, alpha, Ns, -rayDir, weight);
+                vec3f mont_dir;
+                mont_dir= Sample(diffuseColor, specColor, alpha, Ns, -rayDir, weight, prd);
+                //mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
+                M_extansion mext;
+                mext.diffuseColor = diffuseColor;
+                mext.specColor = specColor;
+                weight = Eval(sbtData, Ns, rayDir, mont_dir,mext);
                 uint32_t u0, u1;
                 packPointer(&newprd, u0, u1);
+                newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
                 newprd.depth = prd.depth + 1;
                 newprd.refraction_index = 1.0;
                 newprd.pixelColor = prd.pixelColor  * weight* limportance;
@@ -387,7 +272,6 @@ namespace osc {
         PRD prd;
         prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
             optixLaunchParams.frame.frameID);
-
         // the values we store the PRD pointer in:
         uint32_t u0, u1;
         packPointer(&prd, u0, u1);

@@ -15,5 +15,10 @@ namespace osc {
         vec3f  pixelAlbedo;
         float refraction_index;//当前光线相对于空气的折射率
     };
+
+    struct M_extansion {
+        vec3f diffuseColor;
+        vec3f specColor;
+    };
 }
 
