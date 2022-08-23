@@ -1,8 +1,6 @@
 //the main render library
 #include "SampleRenderer.h"
 
-#include "LightParams.h"
-
 // our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
@@ -14,10 +12,10 @@ namespace osc {
     SampleWindow(const std::string &title,
                  const Model *model,
                  const Camera &camera,
-                 const LightParams* light,
+                 const  std::vector<LightParams*> light,
                  const float worldScale)
       : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
-        sample(model)
+        sample(model,light)
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
@@ -187,16 +185,21 @@ namespace osc {
                                       /* up */vec3f(0.f,1.f,0.f) };
 
       // some simple, hard-coded light
-      LightParams envLight(ENV, 0);
-      envLight.initEnvLight(vec3f(0,0,0), 100.0f, vec3f(100.0f, 80.0f, 80.0f));
-                      
+      std::vector<LightParams*> All_Lights;
+
+      
+      const float light_size = 200.f;
+      LightParams quadLight(QUAD, 0);
+      quadLight.initQuadLight(vec3f(-1000 - light_size, 800, -light_size), vec3f(2.f * light_size, 0, 0), vec3f(0, 0, 2.f * light_size), vec3f(100.0f, 100.0f, 100.0f));
+      All_Lights.push_back(&quadLight);
+
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
 
       const float worldScale = length(model->bounds.span());
 
       SampleWindow *window = new SampleWindow("Optix 7 Course Example",
-                                              model,camera, &envLight, worldScale);
+                                              model,camera, All_Lights, worldScale);
       window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;

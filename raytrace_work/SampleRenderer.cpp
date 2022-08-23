@@ -1,5 +1,4 @@
 #include "SampleRenderer.h"
-#include "LaunchParams.h"
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
@@ -35,16 +34,13 @@ namespace osc {
 
   /*! constructor - performs all setup, including initializing
     optix, creates module, pipeline, programs, SBT, etc. */
-  SampleRenderer::SampleRenderer(const Model *model)
+  SampleRenderer::SampleRenderer(const Model *model, std::vector<LightParams*>light)
     : model(model)
   {
     initOptix();
 
-    // 光源部分： 目前就这么一点点，而且实际上用不到
-    //launchParams.light.origin = light.origin;
-    //launchParams.light.du     = light.du;
-    //launchParams.light.dv     = light.dv；
-    //launchParams.light.power  = light.power;
+    std::cout << "#osc: creating light ext ..." << std::endl;
+    createLight(light);
 
     std::cout << "#osc: creating optix context ..." << std::endl;
     createContext();
@@ -76,6 +72,11 @@ namespace osc {
     std::cout << GDT_TERMINAL_GREEN;
     std::cout << "#osc: Optix 7 Sample fully set up" << std::endl;
     std::cout << GDT_TERMINAL_DEFAULT;
+  }
+
+  void SampleRenderer::createLight(std::vector<LightParams*> lights)
+  {
+      launchParams.All_Lights = lights;
   }
 
   void SampleRenderer::createTextures()
@@ -584,6 +585,12 @@ namespace osc {
         rec.data.roughness = mesh->roughness;
         rec.data.metallic = mesh->metallic;
         rec.data.sheen = mesh->sheen;
+        rec.data.sheenTint = mesh->sheenTint;
+        rec.data.subsurface = mesh->subsurface;
+        rec.data.specular = mesh->specular;
+        rec.data.specularTint=mesh->specularTint;
+        rec.data.clearcoat = mesh->clearcoat;
+        rec.data.clearcoatGloss = mesh->clearcoatGloss;
         hitgroupRecords.push_back(rec);
       }
     }

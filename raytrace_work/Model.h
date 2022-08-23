@@ -41,9 +41,19 @@ namespace osc {
       float alpha_ = 0.f; // shininess constant
       bool emissive_ = 0;
       vec3f emission = 0.f;
-      float roughness;
-      float metallic;
-      float sheen;
+      float subsurface;//次表面，控制漫反射形状
+      float roughness;//粗糙度，影响漫反射和镜面反射 
+      float metallic; //金属度，规定电介质为0，金属为1；
+       //当值趋向1时：弱化漫反射比率，强化镜面反射强度，同时镜面反射逐渐附带上金属色
+       //半导体材质情况特殊，尽量避免使用半导体调试效果
+      float sheen;//光泽度，一种额外的掠射分量，一般用于补偿布料在掠射角下的光能  
+      float sheenTint;//光泽色，控制sheen的颜色
+      float specular;//高光强度(镜面反射强度)
+      //控制镜面反射光占入射光的比率，用于取代折射率
+      float specularTint;//高光染色，和baseColor一起，控制镜面反射的颜色
+      float clearcoat;//清漆强度，控制第二个镜面反射波瓣形成及其影响范围
+      float clearcoatGloss;//清漆光泽度，控制透明涂层的高光强度（光泽度）
+      //规定缎面(satin)为0，光泽(gloss)为1；
   };
 
   struct QuadLight {

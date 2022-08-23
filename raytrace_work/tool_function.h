@@ -4,6 +4,9 @@
 #include "PRD.h"
 
   namespace osc {
+    enum PdfType {
+        DirectLight, InDirectLight
+    };
    static __forceinline__ __device__
         void* unpackPointer(uint32_t i0, uint32_t i1)
     {
@@ -100,33 +103,6 @@
         return normalize(u * std::cos(phi) * sin_theta + v * std::sin(phi) * sin_theta + w * cos_theta);
     }
 
-    static __forceinline__  __device__
-        vec3f Sample(const vec3f diffuse, const vec3f spec, const float alpha, const vec3f& n, const vec3f& wi, vec3f& weight,PRD&prd)
-    {
-        const float PI_ = 3.1415926535897932384626;
-        const float k_d_ = (diffuse.x + diffuse.y + diffuse.z) / 3;
-        const float k_s_ = (spec.x + spec.y + spec.z) / 3;
-        const float R = k_s_ ? k_d_ / (k_d_ + k_s_) : 1.f;
-        const float r0 =prd.random();
-        if (r0 < R) { // sample diffuse ray
-            weight = k_d_ ? diffuse / R : vec3f(0, 0, 0);
-            return AxisAngle(n, prd.random(), prd.random() * 2 * PI_);
-        }
-
-        else { // sample specular ray
-            if (0) {
-                const vec3f d = AxisAngle(n * 2 * dot(n, wi) - wi, std::pow(prd.random(), float(2) / (alpha + 2)), prd.random() * 2 * PI_);
-                weight = dot(n, d) <= 0 || !k_s_ ? vec3f(0, 0, 0) : spec / (1 - R);
-                return d;
-            }
-            else { // for ideal mirrors
-                weight = k_s_ ? spec / (1 - R) : vec3f(0, 0, 0);
-                return n * 2 * dot(n, wi) - wi;
-            }
-        }
-    }
-
-    // yqy's code below-------------------
        // tool functions---------------
     static __forceinline__  __device__
         float smithG_GGX(float NDotv, float alphaG)
@@ -166,15 +142,14 @@
 
     // PDF returns a percentage
     static __forceinline__  __device__
-        float Pdf(const TriangleMeshSBTData& mat, const vec3f& normal, const vec3f& ray_in, const vec3f& ray_out)
+        float Pdf_brdf(const TriangleMeshSBTData& mat, const vec3f& normal, const vec3f& ray_in, const vec3f& ray_out)
     {
         vec3f n = normal;
         vec3f V = -ray_in;
         vec3f L = ray_out;
 
         float specularAlpha = max(0.001f, mat.roughness);
-        //float clearcoatAlpha = std::lerp(0.1f, 0.001f, mat.clearcoatGloss);// 1.0 default
-        float clearcoatAlpha = lerp(0.1f, 0.001f, 1.0f);
+        float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);// 1.0 default
 
         float diffuseRatio = 0.5f * (1.f - mat.metallic);
         float specularRatio = 1.f - diffuseRatio;
@@ -186,8 +161,7 @@
         float pdfGTR1 = GTR1(cosTheta, clearcoatAlpha) * cosTheta;
 
         // calculate diffuse and specular pdfs and mix ratio
-        //float ratio = 1.0f / (1.0f + mat.clearcoat);//0.0 default
-        float ratio = 1.0f / (1.0f + 0.0f);
+        float ratio = 1.0f / (1.0f + mat.clearcoat);//0.0 default
         float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
         float pdfDiff = abs(dot(L, n)) * (1.0f / M_PI);
 
@@ -220,9 +194,6 @@
             float phi = r1 * 2.0f * M_PI;
 
             float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-            //float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-            //float sinPhi = sinf(phi);
-            //float cosPhi = cosf(phi);
 
             vec3f half = AxisAngle(N, 2 * cosTheta * cosTheta - 1, phi);
 
@@ -252,10 +223,10 @@
         float Cdlum = 0.3f * Cdlin.x + 0.6f * Cdlin.y + 0.1f * Cdlin.z; // luminance approx.
 
         vec3f Ctint = Cdlum > 0.0f ? Cdlin / Cdlum : vec3f(1.0f); // normalize lum. to isolate hue+sat
-        //vec3f Cspec0 = lerp(mat.specular * 0.08f * lerp(vec3f(1.0f), Ctint, mat.specularTint), Cdlin, mat.metallic);
-        //vec3f Csheen = lerp(vec3f(1.0f), Ctint, mat.sheenTint);
-        vec3f Cspec0 = lerp(0.5f * 0.08f * lerp(vec3f(1.0f), Ctint, 0.0f), Cdlin, mat.metallic);
-        vec3f Csheen = lerp(vec3f(1.0f), Ctint, 0.0f);
+
+        
+        vec3f Cspec0 = lerp(mat.specular * 0.08f * lerp(vec3f(1.0f), Ctint, mat.specularTint), Cdlin, mat.metallic);
+        vec3f Csheen = lerp(vec3f(1.0f), Ctint, mat.sheenTint);
 
         // Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
         // and mix in diffuse retro-reflection based on roughness
@@ -287,17 +258,29 @@
         vec3f Fsheen = FH * mat.sheen * Csheen;
 
         // clearcoat (ior = 1.5 -> F0 = 0.04)
-        //float Dr = GTR1(NDotH, lerp(0.1f, 0.001f, mat.clearcoatGloss));
-        float Dr = GTR1(NDotH, lerp(0.1f, 0.001f, 1.0f));
+        float Dr = GTR1(NDotH, lerp(0.1f, 0.001f, mat.clearcoatGloss));
+
         float Fr = lerp(0.04f, 1.0f, FH);
         float Gr = smithG_GGX(NDotL, 0.25f) * smithG_GGX(NDotV, 0.25f);
 
-        //vec3f out = ((1.0f / M_PI) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
-        //    * (1.0f - mat.metallic)
-         //   + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
-        vec3f out = ((1.0f / M_PI) * lerp(Fd, ss, 0.0f) * Cdlin + Fsheen)
+        vec3f out = ((1.0f / M_PI) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
             * (1.0f - mat.metallic)
-            + Gs * Fs * Ds + 0.25f * 0.0f * Gr * Fr * Dr;
+            + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
         return out * clamp(dot(N, L), 0.0f, 1.0f);
     }
+
+    static __forceinline__  __device__
+    vec3f MIS(vec3f V, PdfType type) {
+        switch (type)
+        {
+        case osc::DirectLight:
+            //Pdf_brdf()
+            break;
+        case osc::InDirectLight:
+            break;
+        default: printf("MIS error");
+            break;
+        }
+    }
 }
+

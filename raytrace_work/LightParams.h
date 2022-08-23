@@ -1,6 +1,5 @@
 // 目前只实现面光源、球形光源、环境光、点光源
 // 待实现物体光源、方向光
-
 #pragma once
 #include "optix7.h"
 #include "PRD.h"
@@ -46,10 +45,12 @@ namespace osc {
 			area = 4 * M_PIf * radius;
 		}
 
-		inline __both__ void initQuadLight(vec3f& pos, float r, vec3f& _emission) {
+		inline __both__ void initQuadLight(vec3f& pos, vec3f uin,vec3f vin, vec3f& _emission){
 			position = pos;
-			radius = r;
 			emission = _emission;
+			u = uin;
+			v = vin;
+			normal = normalize(cross(u, v));
 			area = length(u) * length(v);
 		}
 
@@ -69,6 +70,7 @@ namespace osc {
 			float y = r * sinf(phi);
 			return vec3f(x, y, z);
 		}
+
 		inline __both__ void sample(LightSample& sample, PRD& prd) {
 			// Add this prefix to try to fit in cuda
 			const float r1 = prd.random();
@@ -85,11 +87,10 @@ namespace osc {
 				sample.surfacePos = position + u * r1 + v * r2;
 				sample.normal = normal;
 				sample.emission = emission;
-				sample.emission *= dot(sample.dir, sample.normal) < 0 ? 0 : 1;
 				sample.pdf = 1.0 / area;
 				break;
 			case ENV:
-				// treat as a hemisphere
+				// treat as a hemisphere.
 				sample.dir = -UniformSampleSphere(r1, r2);
 				sample.dir[2] = fabs(sample.dir[2]);
 				sample.normal = sample.dir;
@@ -101,9 +102,25 @@ namespace osc {
 				printf("Unrecognizable light type...\n");
 				break;
 			}
-
 		}
 
+
+		inline __both__ float Pdf_Light() {
+			vec3f origin = optixGetWorldRayOrigin();
+			vec3f dir = optixGetWorldRayDirection();
+			switch (lightType)
+			{
+			case SPHERE:
+				break;
+			case QUAD: 
+				break;
+			case ENV:
+				break;
+			default:
+				printf("Unrecognizable light type...\n");
+				break;
+			}
+		}
 	};
 
 
