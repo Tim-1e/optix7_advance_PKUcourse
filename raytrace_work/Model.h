@@ -26,11 +26,12 @@ namespace osc {
   /*! a simple indexed triangle mesh that our sample renderer will
       render */
   struct TriangleMesh {
-    std::vector<vec3f> vertex;
-    std::vector<vec3f> normal;
-    std::vector<vec2f> texcoord;
-    std::vector<vec3i> index;
+      std::vector<vec3f> vertex;
+      std::vector<vec3f> normal;
+      std::vector<vec2f> texcoord;
+      std::vector<vec3i> index;
 
+<<<<<<< HEAD
     // material data:
     vec3f              diffuse;
     int                diffuseTextureID { -1 };
@@ -44,6 +45,21 @@ namespace osc {
     float roughness;            
     float metallic;
     float sheen;
+=======
+      // material data:
+      vec3f              diffuse;
+      int                diffuseTextureID{ -1 };
+      vec3f               spec = 0.f;
+      int                specTextureID{ -1 };
+      float               d = 1.f;//refractable
+      float               Kr = 0.f;//refraction rate
+      float alpha_ = 0.f; // shininess constant
+      bool emissive_ = 0;
+      vec3f emission = 0.f;
+      float roughness;
+      float metallic;
+      float sheen;
+>>>>>>> 95877ce5f206b71c81b660d0647f30c483c24282
   };
 
   struct QuadLight {

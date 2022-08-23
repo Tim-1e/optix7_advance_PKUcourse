@@ -203,7 +203,11 @@ namespace osc {
           mesh->emission = (const vec3f&)materials[materialID].emission;
           if (mesh->emission.x + mesh->emission.y + mesh->emission.z > 0.1) mesh->emissive_ = 1;
           mesh->Kr = (const float&)materials[materialID].ior;
+<<<<<<< HEAD
           mesh->d= (const float&)materials[materialID].dissolve;
+=======
+          mesh->d = (const float&)materials[materialID].dissolve;
+>>>>>>> 95877ce5f206b71c81b660d0647f30c483c24282
           mesh->roughness = materials[materialID].roughness;
           mesh->metallic = materials[materialID].metallic;
           mesh->sheen = materials[materialID].sheen;

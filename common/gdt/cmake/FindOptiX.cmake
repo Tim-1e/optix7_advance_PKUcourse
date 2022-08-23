@@ -37,6 +37,7 @@ if (WIN32)
 		PATHS
     "D:/Program Files (x86)/Optix"
     "C:\\ProgramData\\NVIDIA Corporation\\OptiX SDK 7.4.0"
+    "C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.5.0"
 		"C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.3.0"
 		"C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.2.0"
 		"C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.1.0"

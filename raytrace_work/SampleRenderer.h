@@ -28,7 +28,7 @@ namespace osc {
   public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    SampleRenderer(const Model *model, const QuadLight &light);
+    SampleRenderer(const Model *model);
 
     /*! render one frame */
     void render();
