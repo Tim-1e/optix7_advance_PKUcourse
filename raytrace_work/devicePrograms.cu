@@ -244,22 +244,22 @@ namespace osc {
 
         vec3f dir;
         Random x;
-        float probability = x();
+        //const float probability = x();
         float diffuseRatio = 0.5f * (1.0f - mat.metallic);
 
-        float r1 = x();
-        float r2 = x();
+        //const float r1 = y();
+        //const float r2 = z();
+        const float r2 = x();
 
-
-        if (probability < diffuseRatio) // sample diffuse
+        if (x() < diffuseRatio) // sample diffuse
         {
-            dir = AxisAngle(N, r1, r2 * 2 * M_PI);
+            dir = AxisAngle(N, x(), x() * 2 * M_PI);
         }
         else
         {
             float a = max(0.001f, mat.roughness);
 
-            float phi = r1 * 2.0f * M_PI;
+            float phi = x() * 2.0f * M_PI;
 
             float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
             //float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
@@ -290,6 +290,7 @@ namespace osc {
         float LDotH = dot(L, H);
 
         vec3f Cdlin = mat.color;
+
         float Cdlum = 0.3f * Cdlin.x + 0.6f * Cdlin.y + 0.1f * Cdlin.z; // luminance approx.
 
         vec3f Ctint = Cdlum > 0.0f ? Cdlin / Cdlum : vec3f(1.0f); // normalize lum. to isolate hue+sat
@@ -500,7 +501,7 @@ namespace osc {
                 PRD newprd;
                 vec3f weight = 1.0f;
                 vec3f mont_dir = Sample(diffuseColor, specColor, alpha, Ns, -rayDir, weight);
-                //mont_dir = Sample_yqy(sbtData, Ns, rayDir);
+                //vec3f mont_dir = Sample_yqy(sbtData, Ns, rayDir);
                 //weight = Eval(sbtData, Ns, rayDir, mont_dir);
                 uint32_t u0, u1;
                 packPointer(&newprd, u0, u1);
