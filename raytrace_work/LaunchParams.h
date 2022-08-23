@@ -27,28 +27,6 @@ namespace osc {
   enum { RADIANCE_RAY_TYPE=0, SHADOW_RAY_TYPE, RAY_TYPE_COUNT };
   //enum { RADIANCE_RAY_TYPE = 0, RAY_TYPE_COUNT };
   struct TriangleMeshSBTData {
-<<<<<<< HEAD
-    vec3f  color;
-    vec3f *vertex;
-    vec3f *normal;
-    vec2f *texcoord;
-    vec3i *index;
-
-    bool  hasTexture;
-    int ID;
-    vec3f emission;
-    bool emissive_;
-    float d;//refractable
-    float Kr;//refraction rate
-    float alpha_; // shininess constant
-    float roughness;            
-    float metallic;
-    float sheen;
-    cudaTextureObject_t texture;
-    bool hasSpecTexture;
-    cudaTextureObject_t spectexture;
-    
-=======
       vec3f  color;
       vec3f* vertex;
       vec3f* normal;
@@ -68,8 +46,6 @@ namespace osc {
       cudaTextureObject_t texture;
       bool hasSpecTexture;
       cudaTextureObject_t spectexture;
-
->>>>>>> 95877ce5f206b71c81b660d0647f30c483c24282
   };
   
   struct LaunchParams
