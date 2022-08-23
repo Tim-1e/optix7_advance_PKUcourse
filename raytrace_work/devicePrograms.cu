@@ -16,8 +16,7 @@
 
 #include <optix_device.h>
 #include <cuda_runtime.h>
-
-#include "LightParams.h"
+#include <vector>
 #include "LaunchParams.h"
 #include "tool_function.h"
 
@@ -49,19 +48,21 @@ namespace osc
 
     extern "C" __global__ void __closesthit__radiance()
     {
-        const TriangleMeshSBTData &sbtData = *(const TriangleMeshSBTData *)optixGetSbtDataPointer();
-        PRD &prd = *getPRD<PRD>();
-        const int Maxdepth = 4;
-        const float refraction_color = 1.0f;
-        const float reflection_color = 1.0f;
-        if (prd.depth >= Maxdepth)
-        {
+        const TriangleMeshSBTData& sbtData
+            = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
+        PRD& prd = *getPRD<PRD>();
+        const int Maxdepth = 20;
+        const float RR = 0.8f;//俄罗斯轮盘赌
+        if (prd.random() > RR) {
             prd.pixelColor = 0.0f;
             return;
         }
-        if (sbtData.emissive_)
-        {
-            prd.pixelColor *= sbtData.emission;
+        if (prd.depth >= Maxdepth) {
+            prd.pixelColor = 0.0f;
+            return;
+        }
+        if (sbtData.emissive_) {
+            prd.pixelColor = sbtData.emission*prd.throughout;
             return;
         }
         // ------------------------------------------------------------------
@@ -88,9 +89,8 @@ namespace osc
         // face-forward and normalize normals
         // ------------------------------------------------------------------
         const vec3f rayDir = optixGetWorldRayDirection();
-
-        if (dot(rayDir, Ng) > 0.f)
-            Ng = -Ng;
+        
+        if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
         if (dot(Ng, Ns) < 0.f)
@@ -121,8 +121,6 @@ namespace osc
         const float alpha = sbtData.alpha_;
         const float d = sbtData.d;
 
-        // start with some ambient term
-        // vec3f pixelColor = (0.1f + 0.2f*fabsf(dot(Ns,rayDir)))*diffuseColor;
         vec3f pixelColor = 0.f;
 
         // ------------------------------------------------------------------
@@ -130,93 +128,76 @@ namespace osc
         // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
-        const int numLightSamples = NUM_LIGHT_SAMPLES;
-        for (int lightSampleID = 0; lightSampleID < numLightSamples; lightSampleID++)
-        {
-            float reflection = 1.0f;
-            vec3f rDir; //折射
-            float cos_theta = dot(rayDir, Ns);
-            if (d < 0.5 && refract(rDir, rayDir, Ns, prd.refraction_index))
-            {
-                //根据入射角的cos值来计算折射与反射的比率，在一定角度就全反射了，在垂直时是全折射
-                //正入射进去,这是正常情况
-                if (cos_theta < 0.0f)
-                {
-                    cos_theta = -cos_theta;
-                }
-                else
-                {
-                    //异常了使用折射光线再计算一次
-                    cos_theta = dot(rDir, Ns);
-                }
+        // ------------------------------------------------------------------
+        //Begin of the true brdf
+        //
+        // ------------------------------------------------------------------
 
-                reflection = fresnel_schlick(cos_theta);
-                float rimportance = (1.0f - reflection) * refraction_color;
-                PRD newprd;
-                // the values we store the PRD pointer in:
-                uint32_t u0, u1;
-                packPointer(&newprd, u0, u1);
-                newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
-                newprd.pixelColor = prd.pixelColor * rimportance;
-                newprd.depth = prd.depth + 1;
-                if (prd.refraction_index > 1.f)
-                    newprd.refraction_index = 0.684f;
-                else
-                    newprd.refraction_index = 1.46f;
-                optixTrace(optixLaunchParams.traversable,
-                           surfPos - 1e-3f * Ng,
-                           rDir,
-                           0.f,   // tmin
-                           1e20f, // tmax
-                           0.0f,  // rayTime
-                           OptixVisibilityMask(255),
-                           // For shadow rays: skip any/closest hit shaders and terminate on first
-                           // intersection with anything. The miss shader is used to mark if the
-                           // light was visible.
-                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                           RADIANCE_RAY_TYPE, // SBT offset
-                           RAY_TYPE_COUNT,    // SBT stride
-                           RADIANCE_RAY_TYPE, // missSBTIndex
-                           u0, u1);
-                pixelColor += newprd.pixelColor / numLightSamples;
-            }
-            if (cos_theta < 0.0f)
-            {
-                float limportance = reflection * reflection_color;
-                // the values we store the PRD pointer in:
-                PRD newprd;
-                vec3f weight = 1.0f;
-                vec3f mont_dir;
-                mont_dir = Sample(diffuseColor, specColor, alpha, Ns, -rayDir, weight, prd);
-                // mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
-                M_extansion mext;
-                mext.diffuseColor = diffuseColor;
-                mext.specColor = specColor;
-                weight = Eval(sbtData, Ns, rayDir, mont_dir, mext);
-                uint32_t u0, u1;
-                packPointer(&newprd, u0, u1);
-                newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
-                newprd.depth = prd.depth + 1;
-                newprd.refraction_index = 1.0;
-                newprd.pixelColor = prd.pixelColor * weight * limportance;
-                optixTrace(optixLaunchParams.traversable,
-                           surfPos + 1e-3f * Ng,
-                           mont_dir,
-                           0.f,   // tmin
-                           1e20f, // tmax
-                           0.0f,  // rayTime
-                           OptixVisibilityMask(255),
-                           // For shadow rays: skip any/closest hit shaders and terminate on first
-                           // intersection with anything. The miss shader is used to mark if the
-                           // light was visible.
-                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                           RADIANCE_RAY_TYPE, // SBT offset
-                           RAY_TYPE_COUNT,    // SBT stride
-                           RADIANCE_RAY_TYPE, // missSBTIndex
-                           u0, u1);
-                pixelColor += newprd.pixelColor / numLightSamples;
-            }
+        PRD newprd;//新光线
+        uint32_t u0, u1;
+        
+        vec3f mont_dir;//光方向
+        vec3f weight = 1.0f;//权重
+
+         //直接光
+        int num = optixLaunchParams.All_Lights.size();
+        weight *= num;
+        LightParams *Lp = optixLaunchParams.All_Lights[int(num * prd.random())];
+        LightSample Light_point;
+
+        Lp->sample(Light_point, prd);
+
+        int dir_hit = 0;
+        packPointer(&dir_hit, u0, u1);
+        vec3f lightDir = normalize(Light_point.surfacePos - surfPos);
+        optixTrace(optixLaunchParams.traversable,
+            surfPos + 1e-3f * Ng,
+            lightDir,
+            0.f,    // tmin
+            1e20f,  // tmax
+            0.0f,   // rayTime
+            OptixVisibilityMask(255),
+            // For shadow rays: skip any/closest hit shaders and terminate on first
+            // intersection with anything. The miss shader is used to mark if the
+            // light was visible.
+            OPTIX_RAY_FLAG_DISABLE_ANYHIT
+            | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+            | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+            SHADOW_RAY_TYPE,            // SBT offset
+            RAY_TYPE_COUNT,               // SBT stride
+            SHADOW_RAY_TYPE,            // missSBTIndex 
+            u0, u1);
+        if (dir_hit) {
+            float dis = length(Light_point.surfacePos - surfPos);
+            vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission * dot(Light_point.normal, -lightDir) / (dis * dis);
+            pixelColor += Dir_color_contri/(Light_point.pdf+Pdf_brdf(sbtData,Ns,rayDir,lightDir));
         }
+            
+            
+        //间接光
+        mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
+        M_extansion mext;
+        mext.diffuseColor = diffuseColor;
+        mext.specColor = specColor;
+        weight = Eval(sbtData, Ns, rayDir, mont_dir,mext);
+        packPointer(&newprd, u0, u1);
+        newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
+        newprd.depth = prd.depth + 1;
+        newprd.throughout = prd.throughout*weight/RR;
+        optixTrace(optixLaunchParams.traversable,
+            surfPos + 1e-3f * Ng,
+            mont_dir,
+            0.f,    // tmin
+            1e20f,  // tmax
+            0.0f,   // rayTime
+            OptixVisibilityMask(255),
+            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+            RADIANCE_RAY_TYPE,            // SBT offset
+            RAY_TYPE_COUNT,               // SBT stride
+            RADIANCE_RAY_TYPE,            // missSBTIndex 
+            u0, u1);
+        pixelColor+=  newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir)+ Lp->Pdf_Light());
+            
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = pixelColor;
@@ -242,15 +223,14 @@ namespace osc
     {
         PRD &prd = *getPRD<PRD>();
         // set to constant white as background color
-        // 这儿可能要改成环境光
-        prd.pixelColor *= vec3f(10.f);
+        prd.pixelColor = 0.f;
     }
 
     extern "C" __global__ void __miss__shadow()
     {
-        // we didn't hit anything, so the light is visible
-        vec3f &prd = *(vec3f *)getPRD<vec3f>();
-        prd = vec3f(0.f);
+        int& dir_hit = *getPRD<int>();
+        // set to constant white as background color
+        dir_hit = 1;
     }
 
     //------------------------------------------------------------------------------
@@ -283,22 +263,23 @@ namespace osc
             // assume that the camera should only(!) cover the denoised
             // screen then the actual screen plane we shuld be using during
             // rendreing is slightly larger than [0,1]^2
-            vec2f screen(vec2f(ix + prd.random(), iy + prd.random()) / vec2f(optixLaunchParams.frame.size));
-            // screen
-            //   = screen
-            //   * vec2f(optixLaunchParams.frame.denoisedSize)
-            //   * vec2f(optixLaunchParams.frame.size)
-            //   - 0.5f*(vec2f(optixLaunchParams.frame.size)
-            //           -
-            //           vec2f(optixLaunchParams.frame.denoisedSize)
-            //           );
+            vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
+                / vec2f(optixLaunchParams.frame.size));
+             //screen
+             //  = screen
+             //  * vec2f(optixLaunchParams.frame.denoisedSize)
+             //  * vec2f(optixLaunchParams.frame.size)
+             //  - 0.5f*(vec2f(optixLaunchParams.frame.size)
+             //          -
+             //          vec2f(optixLaunchParams.frame.denoisedSize)
+             //          );
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
 
             prd.pixelColor = vec3f(1.f);
             prd.depth = 0;
-            prd.refraction_index = 1.46f;
+            prd.throughout = 1.f;
             optixTrace(optixLaunchParams.traversable,
                        camera.position,
                        rayDir,

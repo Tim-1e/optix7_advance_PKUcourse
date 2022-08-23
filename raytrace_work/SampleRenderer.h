@@ -28,7 +28,7 @@ namespace osc {
   public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    SampleRenderer(const Model *model);
+    SampleRenderer(const Model *model, const std::vector<LightParams*> light);
 
     /*! render one frame */
     void render();
@@ -43,7 +43,7 @@ namespace osc {
     void setCamera(const Camera &camera);
 
     
-    bool denoiserOn = true;
+    bool denoiserOn = false;
     bool accumulate = true;
   protected:
 
@@ -58,6 +58,9 @@ namespace osc {
     /*! helper function that initializes optix and checks for errors */
     void initOptix();
   
+    /*! initial our light */
+    void createLight(std::vector<LightParams*> light);
+
     /*! creates and configures a optix device context (in this simple
       example, only for the primary GPU device) */
     void createContext();

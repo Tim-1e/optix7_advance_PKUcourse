@@ -207,8 +207,13 @@ namespace osc {
           mesh->roughness = materials[materialID].roughness;
           mesh->metallic = materials[materialID].metallic;
           mesh->sheen = materials[materialID].sheen;
-          //if (mesh->specTextureID >= 0)
-          //    printf("%d %s\n", mesh->specTextureID,(materials[materialID].specular_texname).c_str());
+          //the deflaut const
+          mesh->subsurface = 0.f;
+          mesh->specular = 0.5f;
+          mesh->specularTint = 0.f;
+          mesh->clearcoat = 0.f;
+          mesh->clearcoatGloss = 1.f;
+          mesh->sheenTint = 0.f;
         }
         
         if (mesh->vertex.empty())
