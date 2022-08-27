@@ -39,14 +39,14 @@ namespace osc {
   {
     initOptix();
 
-    std::cout << "#osc: creating light ext ..." << std::endl;
-    createLight(light);
-
     std::cout << "#osc: creating optix context ..." << std::endl;
     createContext();
       
     std::cout << "#osc: setting up module ..." << std::endl;
     createModule();
+
+    std::cout << "#osc: creating light ext ..." << std::endl;
+    createLight(light);
 
     std::cout << "#osc: creating raygen programs ..." << std::endl;
     createRaygenPrograms();
@@ -77,10 +77,8 @@ namespace osc {
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
       All_LightBuffer.alloc_and_upload(lights);
-      for (int i = 0; i < lights.size(); i++)
-      {
-          launchParams.All_Lights = All_LightBuffer.d_pointer();
-      }
+      launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
+      launchParams.Lights_num = lights.size();
   }
 
   void SampleRenderer::createTextures()
