@@ -149,10 +149,14 @@ namespace osc {
         vec3f mont_dir;//光方向
         vec3f weight = 1.0f;//权重
 
+        M_extansion mext;
+        mext.diffuseColor = diffuseColor;
+        mext.specColor = specColor;//材质属性
+
          //直接光
-        int num = optixLaunchParams.All_Lights.size();
+        int num = optixLaunchParams.Lights_num;
         weight *= num;
-        LightParams *Lp = optixLaunchParams.All_Lights[int(num * prd.random())];
+        LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
         LightSample Light_point;
 
         Lp->sample(Light_point, prd);
@@ -179,16 +183,16 @@ namespace osc {
             u0, u1);
         if (dir_hit) {
             float dis = length(Light_point.surfacePos - surfPos);
-            vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission * dot(Light_point.normal, -lightDir) / (dis * dis);
-            pixelColor += Dir_color_contri/(Light_point.pdf+Pdf_brdf(sbtData,Ns,rayDir,lightDir));
+            weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
+            vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission ;
+            vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
+            pixelColor += Dir_color_contri/(True_pdf +Pdf_brdf(sbtData,Ns,rayDir,lightDir));
         }
             
             
         //间接光
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
-        M_extansion mext;
-        mext.diffuseColor = diffuseColor;
-        mext.specColor = specColor;
+
         weight = Eval(sbtData, Ns, rayDir, mont_dir,mext);
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
@@ -202,11 +206,11 @@ namespace osc {
             0.0f,   // rayTime
             OptixVisibilityMask(255),
             OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-            RADIANCE_RAY_TYPE,            // SBT offset
+            RADIANCE_RAY_TYPE,            // SBT offset`
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        pixelColor+=  newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir)+ Lp->Pdf_Light());
+        pixelColor+=  newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir)+ Lp->Pdf_Light(surfPos,mont_dir));
             
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;

@@ -12,7 +12,7 @@ namespace osc {
     SampleWindow(const std::string &title,
                  const Model *model,
                  const Camera &camera,
-                 const  std::vector<LightParams*> light,
+                 const  std::vector<LightParams> light,
                  const float worldScale)
       : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
         sample(model,light)
@@ -185,13 +185,13 @@ namespace osc {
                                       /* up */vec3f(0.f,1.f,0.f) };
 
       // some simple, hard-coded light
-      std::vector<LightParams*> All_Lights;
+      std::vector<LightParams> All_Lights;
 
       
       const float light_size = 200.f;
       LightParams quadLight(QUAD, 0);
       quadLight.initQuadLight(vec3f(-1000 - light_size, 800, -light_size), vec3f(2.f * light_size, 0, 0), vec3f(0, 0, 2.f * light_size), vec3f(100.0f, 100.0f, 100.0f));
-      All_Lights.push_back(&quadLight);
+      All_Lights.push_back(quadLight);
 
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
