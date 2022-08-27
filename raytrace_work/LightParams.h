@@ -105,14 +105,31 @@ namespace osc {
 		}
 
 
-		inline __both__ float Pdf_Light() {
-			vec3f origin = optixGetWorldRayOrigin();
-			vec3f dir = optixGetWorldRayDirection();
+		inline __both__ float Pdf_Light(vec3f origin,vec3f dir) {
+			vec3f cast_pos;
 			switch (lightType)
 			{
 			case SPHERE:
 				break;
 			case QUAD: 
+				//Plane insert
+				if (dot(normal,dir) == 0) {//判断有无交点
+					if (dot(origin-position,normal) == 0) return 1;//在平面上,返回0
+					else return 0;//非平面,无穷
+				}
+				float mydist;
+				mydist=dot(origin - position, normal) / dot(dir, normal);
+				if (mydist < 0) return 0;
+				cast_pos = mydist * dir + origin;
+				float u_cast, v_cast;
+				u_cast = dot(cast_pos - position, u);
+				v_cast = dot(cast_pos - position, v);
+				if (u_cast<length(u) || v_cast<length(v)) {
+					return 1.0 / area* mydist* mydist/dot(normal,-dir);
+				}
+				else
+					return 0;
+
 				break;
 			case ENV:
 				break;

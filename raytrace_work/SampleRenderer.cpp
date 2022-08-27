@@ -34,7 +34,7 @@ namespace osc {
 
   /*! constructor - performs all setup, including initializing
     optix, creates module, pipeline, programs, SBT, etc. */
-  SampleRenderer::SampleRenderer(const Model *model, std::vector<LightParams*>light)
+  SampleRenderer::SampleRenderer(const Model *model, std::vector<LightParams>light)
     : model(model)
   {
     initOptix();
@@ -74,9 +74,13 @@ namespace osc {
     std::cout << GDT_TERMINAL_DEFAULT;
   }
 
-  void SampleRenderer::createLight(std::vector<LightParams*> lights)
+  void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
-      launchParams.All_Lights = lights;
+      All_LightBuffer.alloc_and_upload(lights);
+      for (int i = 0; i < lights.size(); i++)
+      {
+          launchParams.All_Lights = All_LightBuffer.d_pointer();
+      }
   }
 
   void SampleRenderer::createTextures()

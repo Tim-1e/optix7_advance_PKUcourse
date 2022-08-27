@@ -28,7 +28,7 @@ namespace osc {
   public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    SampleRenderer(const Model *model, const std::vector<LightParams*> light);
+    SampleRenderer(const Model *model, const std::vector<LightParams> light);
 
     /*! render one frame */
     void render();
@@ -59,7 +59,7 @@ namespace osc {
     void initOptix();
   
     /*! initial our light */
-    void createLight(std::vector<LightParams*> light);
+    void createLight(std::vector<LightParams> light);
 
     /*! creates and configures a optix device context (in this simple
       example, only for the primary GPU device) */
@@ -130,6 +130,8 @@ namespace osc {
   protected:
     CUDABuffer   launchParamsBuffer;
     /*! @} */
+
+    CUDABuffer All_LightBuffer;
 
     /*! the color buffer we use during _rendering_, which is a bit
         larger than the actual displayed frame buffer (to account for

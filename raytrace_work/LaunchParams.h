@@ -66,7 +66,7 @@ namespace osc {
       float4   *normalBuffer;
       float4   *albedoBuffer;
       
-      /*! the size of the frame buffer to render */
+      /*! the size of the 1 buffer to render */
       vec2i     size;
     } frame;
     
@@ -77,7 +77,9 @@ namespace osc {
       vec3f vertical;
     } camera;
 
-    std::vector<LightParams*> All_Lights;
+    LightParams* All_Lights;
+    int Lights_num;
+
     OptixTraversableHandle traversable;
   };
 
