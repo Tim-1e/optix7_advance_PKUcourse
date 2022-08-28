@@ -131,6 +131,7 @@ namespace osc {
     CUDABuffer   launchParamsBuffer;
     /*! @} */
 
+    /* lights */
     CUDABuffer All_LightBuffer;
 
     /*! the color buffer we use during _rendering_, which is a bit

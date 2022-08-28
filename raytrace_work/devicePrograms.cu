@@ -51,7 +51,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 20;
+        const int Maxdepth = 10;
         const float RR = 0.8f;//¶íÂÞË¹ÂÖÅÌ¶Ä
         if (prd.random() > RR) {
             prd.pixelColor = 0.0f;

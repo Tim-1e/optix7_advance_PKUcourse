@@ -189,7 +189,7 @@ namespace osc {
 
       
       const float light_size = 200.f;
-      LightParams quadLight(QUAD, 0);
+      LightParams quadLight(QUAD, 112);
       quadLight.initQuadLight(vec3f(-1000 - light_size, 800, -light_size), vec3f(2.f * light_size, 0, 0), vec3f(0, 0, 2.f * light_size), vec3f(100.0f, 100.0f, 100.0f));
       All_Lights.push_back(quadLight);
 
