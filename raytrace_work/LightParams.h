@@ -120,11 +120,12 @@ namespace osc {
 				float mydist;
 				mydist=-dot(origin - position, normal) / dot(dir, normal);
 				if (mydist < 0) return 0;
+				if (dot(dir, normal) > 0) return 0;
 				cast_pos = mydist * dir + origin;
 				float u_cast, v_cast;
-				u_cast = dot(cast_pos - position, u);
-				v_cast = dot(cast_pos - position, v);
-				if (u_cast<length(u) || v_cast<length(v)) {
+				u_cast = dot(cast_pos - position, normalize(u));
+				v_cast = dot(cast_pos - position, normalize(v));
+				if (u_cast>=0 && u_cast<=length(u) && v_cast>=0 && v_cast<=length(v)) {
 					return 1.0 / area* mydist* mydist/dot(normal,-dir);
 				}
 				else

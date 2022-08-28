@@ -245,6 +245,10 @@ namespace osc
             prd.pixelColor = Lp->emission * prd.throughout;
             //std::printf("i hit the light!\n");
         }
+        else if (prd.depth == 0)
+        {
+            prd.pixelColor = 0.5f;
+        }
         else
             prd.pixelColor = 0.f;
     }
