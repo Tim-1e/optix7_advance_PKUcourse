@@ -48,6 +48,9 @@ namespace osc {
     std::cout << "#osc: setting up module ..." << std::endl;
     createModule();
 
+    std::cout << "#osc: creating light ext ..." << std::endl;
+    createLight(light);
+
     std::cout << "#osc: creating raygen programs ..." << std::endl;
     createRaygenPrograms();
     std::cout << "#osc: creating miss programs ..." << std::endl;
@@ -77,7 +80,8 @@ namespace osc {
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
       All_LightBuffer.alloc_and_upload(lights);
-      launchParams.All_Lights = (LightParams*)All_LightBuffer.d_pointer();
+      launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
+      launchParams.Lights_num = lights.size();
   }
 
   void SampleRenderer::createTextures()

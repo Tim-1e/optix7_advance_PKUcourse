@@ -52,11 +52,6 @@ namespace osc
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
         const int Maxdepth = 10;
-        const float RR = 0.8f;//俄罗斯轮盘赌
-        if (prd.random() > RR) {
-            prd.pixelColor = 0.0f;
-            return;
-        }
         if (prd.depth >= Maxdepth) {
             prd.pixelColor = 0.0f;
             return;
@@ -128,6 +123,14 @@ namespace osc
         // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
+        float diffuse_max = max(max(diffuseColor[0], diffuseColor[1]), diffuseColor[2]);
+        
+        const float RR =clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
+        if (prd.random() > RR) {
+            prd.pixelColor = 0.0f;
+            return;
+        }
+
         // ------------------------------------------------------------------
         //Begin of the true brdf
         //
@@ -143,7 +146,7 @@ namespace osc
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
 
-         //直接光
+        //直接光
         int num = optixLaunchParams.Lights_num;
         weight *= num;
         LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
@@ -176,9 +179,9 @@ namespace osc
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission ;
             vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
-            pixelColor += Dir_color_contri/(True_pdf +Pdf_brdf(sbtData,Ns,rayDir,lightDir));
+            pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
         }
-            
+
             
         //间接光
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
@@ -200,8 +203,9 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        pixelColor+=  newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir)+ Lp->Pdf_Light(surfPos,mont_dir));
-            
+        pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Lp->Pdf_Light(surfPos, mont_dir));
+
+
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = pixelColor;
@@ -242,6 +246,7 @@ namespace osc
     //------------------------------------------------------------------------------
     extern "C" __global__ void __raygen__renderFrame()
     {
+        const float color_max_avilable = 1.f;
         // compute a test pattern based on pixel ID
         const int ix = optixGetLaunchIndex().x;
         const int iy = optixGetLaunchIndex().y;
@@ -285,20 +290,22 @@ namespace osc
             prd.depth = 0;
             prd.throughout = 1.f;
             optixTrace(optixLaunchParams.traversable,
-                       camera.position,
-                       rayDir,
-                       0.f,   // tmin
-                       1e20f, // tmax
-                       0.0f,  // rayTime
-                       OptixVisibilityMask(255),
-                       OPTIX_RAY_FLAG_DISABLE_ANYHIT, // OPTIX_RAY_FLAG_NONE,
-                       RADIANCE_RAY_TYPE,             // SBT offset
-                       RAY_TYPE_COUNT,                // SBT stride
-                       RADIANCE_RAY_TYPE,             // missSBTIndex
-                       u0, u1);
-            pixelColor += prd.pixelColor;
-            pixelNormal += prd.pixelNormal;
-            pixelAlbedo += prd.pixelAlbedo;
+                camera.position,
+                rayDir,
+                0.f,    // tmin
+                1e20f,  // tmax
+                0.0f,   // rayTime
+                OptixVisibilityMask(255),
+                OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
+                RADIANCE_RAY_TYPE,            // SBT offset
+                RAY_TYPE_COUNT,               // SBT stride
+                RADIANCE_RAY_TYPE,            // missSBTIndex 
+                u0, u1);
+            if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
+                pixelColor += prd.pixelColor;
+                pixelNormal += prd.pixelNormal;
+                pixelAlbedo += prd.pixelAlbedo;
+            }
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
