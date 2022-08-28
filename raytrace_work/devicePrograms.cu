@@ -233,7 +233,9 @@ namespace osc
 
     extern "C" __global__ void __miss__radiance()
     {
+
         PRD &prd = *getPRD<PRD>();
+
         // set to constant white as background color
         LightParams* Lp = &optixLaunchParams.All_Lights[0];
         const vec3f rayDir = optixGetWorldRayDirection();
@@ -298,10 +300,11 @@ namespace osc
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
-
+            
             prd.pixelColor = vec3f(1.f);
             prd.depth = 0;
             prd.throughout = 1.f;
+            prd.sourcePos = camera.position;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
