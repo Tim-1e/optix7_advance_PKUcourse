@@ -57,6 +57,7 @@ namespace osc
             return;
         }
         if (sbtData.emissive_) {
+            std::printf("emissive object hit\n");
             prd.pixelColor = sbtData.emission*prd.throughout;
             return;
         }
@@ -174,14 +175,16 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
+        
         if (dir_hit) {
-            float dis = length(Light_point.surfacePos - surfPos);
+            float dis = max(1e-3,length(Light_point.surfacePos - surfPos));
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
-            vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission ;
+            //vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission ;
+            vec3f Dir_color_contri = prd.throughout * weight / RR * Light_point.emission;
             vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
             pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
         }
-
+        
             
         //¼ä½Ó¹â
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
@@ -191,6 +194,7 @@ namespace osc
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
         newprd.throughout = prd.throughout*weight/RR;
+        newprd.sourcePos = surfPos;
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             mont_dir,
@@ -204,7 +208,7 @@ namespace osc
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
         pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Lp->Pdf_Light(surfPos, mont_dir));
-
+        //pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir));
 
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
@@ -231,7 +235,16 @@ namespace osc
     {
         PRD &prd = *getPRD<PRD>();
         // set to constant white as background color
-        prd.pixelColor = 0.f;
+        LightParams* Lp = &optixLaunchParams.All_Lights[0];
+        const vec3f rayDir = optixGetWorldRayDirection();
+        
+        if (Lp->Pdf_Light(prd.sourcePos, rayDir) > 0)
+        {
+            prd.pixelColor = Lp->emission * prd.throughout;
+            //std::printf("i hit the light!\n");
+        }
+        else
+            prd.pixelColor = 0.f;
     }
 
     extern "C" __global__ void __miss__shadow()
@@ -301,11 +314,11 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
+            //if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
                 pixelColor += prd.pixelColor;
                 pixelNormal += prd.pixelNormal;
                 pixelAlbedo += prd.pixelAlbedo;
-            }
+            //}
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);

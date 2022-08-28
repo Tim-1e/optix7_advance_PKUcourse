@@ -15,6 +15,7 @@ namespace osc {
         vec3f  pixelColor;
         vec3f  pixelNormal;
         vec3f  pixelAlbedo;
+        vec3f  sourcePos;
         //float refraction_index;//当前光线相对于空气的折射率
     };
 

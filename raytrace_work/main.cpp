@@ -188,6 +188,7 @@ namespace osc {
       std::vector<LightParams> All_Lights;
 
       LightParams quadLight(QUAD, 114514);
+
       quadLight.initQuadLight(vec3f(-1300, 1800, -400), vec3f(2*1300.0f, 0, 0), vec3f(0, 0, 2*400.0f), 10.0f*vec3f(1.0f, 1.0f, 1.0f));
       All_Lights.push_back(quadLight);
 

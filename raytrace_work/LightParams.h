@@ -118,7 +118,7 @@ namespace osc {
 					else return 0;//非平面,无穷
 				}
 				float mydist;
-				mydist=dot(origin - position, normal) / dot(dir, normal);
+				mydist=-dot(origin - position, normal) / dot(dir, normal);
 				if (mydist < 0) return 0;
 				cast_pos = mydist * dir + origin;
 				float u_cast, v_cast;
