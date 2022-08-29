@@ -35,6 +35,7 @@ if (WIN32)
 	find_path(searched_OptiX_INSTALL_DIR
 		NAME include/optix.h
 		PATHS
+    "D:/Program Files (x86)/Optix"
     "C:\\ProgramData\\NVIDIA Corporation\\OptiX SDK 7.4.0"
     "C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.5.0"
 		"C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.3.0"

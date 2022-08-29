@@ -24,6 +24,7 @@
 //std
 #include <set>
 
+
 namespace std {
   inline bool operator<(const tinyobj::index_t &a,
                         const tinyobj::index_t &b)
@@ -137,7 +138,7 @@ namespace osc {
     return textureID;
   }
   
-  Model *loadOBJ(const std::string &objFile)
+  Model *loadOBJ(const std::string &objFile, std::vector<LightParams>& lights)
   {
     Model *model = new Model;
 
@@ -179,16 +180,17 @@ namespace osc {
       for (int materialID : materialIDs) {
         TriangleMesh *mesh = new TriangleMesh;
         
-        for (int faceID=0;faceID<shape.mesh.material_ids.size();faceID++) {
-          if (shape.mesh.material_ids[faceID] != materialID) continue;
-          tinyobj::index_t idx0 = shape.mesh.indices[3*faceID+0];
-          tinyobj::index_t idx1 = shape.mesh.indices[3*faceID+1];
-          tinyobj::index_t idx2 = shape.mesh.indices[3*faceID+2];
-          
-          vec3i idx(addVertex(mesh, attributes, idx0, knownVertices),
-                    addVertex(mesh, attributes, idx1, knownVertices),
-                    addVertex(mesh, attributes, idx2, knownVertices));
-          mesh->index.push_back(idx);
+        for (int faceID = 0; faceID < shape.mesh.material_ids.size(); faceID++) {
+            if (shape.mesh.material_ids[faceID] != materialID) continue;//提取相同材质的
+            tinyobj::index_t idx0 = shape.mesh.indices[3 * faceID + 0];
+            tinyobj::index_t idx1 = shape.mesh.indices[3 * faceID + 1];
+            tinyobj::index_t idx2 = shape.mesh.indices[3 * faceID + 2];
+
+            vec3i idx(addVertex(mesh, attributes, idx0, knownVertices),
+                addVertex(mesh, attributes, idx1, knownVertices),
+                addVertex(mesh, attributes, idx2, knownVertices));
+            mesh->index.push_back(idx);
+        }
           mesh->diffuse = (const vec3f&)materials[materialID].diffuse;
           mesh->diffuseTextureID = loadTexture(model,
                                                knownTextures,
@@ -207,9 +209,14 @@ namespace osc {
           mesh->roughness = materials[materialID].roughness;
           mesh->metallic = materials[materialID].metallic;
           mesh->sheen = materials[materialID].sheen;
-          //if (mesh->specTextureID >= 0)
-          //    printf("%d %s\n", mesh->specTextureID,(materials[materialID].specular_texname).c_str());
-        }
+          //the deflaut const
+          mesh->subsurface = 0.f;
+          mesh->specular = 0.5f;
+          mesh->specularTint = 0.f;
+          mesh->clearcoat = 0.f;
+          mesh->clearcoatGloss = 1.f;
+          mesh->sheenTint = 0.f;
+        
         
         if (mesh->vertex.empty())
           delete mesh;

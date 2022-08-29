@@ -203,7 +203,7 @@ newmtl flagpole
 	Ka 1 1 1
 	Kd 1 1 1
 	Ks 0.0500 0.0500 0.0500
-	Ke 5.0000 5.0000 5.0000
+	Ke 10.0000 10.0000 10.0000
 	map_Ka textures\sponza_flagpole_diff.png
 	map_Kd textures\sponza_flagpole_diff.png
 

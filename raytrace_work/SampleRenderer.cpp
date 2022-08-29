@@ -1,5 +1,4 @@
 #include "SampleRenderer.h"
-#include "LaunchParams.h"
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
@@ -35,20 +34,14 @@ namespace osc {
 
   /*! constructor - performs all setup, including initializing
     optix, creates module, pipeline, programs, SBT, etc. */
-  SampleRenderer::SampleRenderer(const Model *model)
+  SampleRenderer::SampleRenderer(const Model *model, std::vector<LightParams>light)
     : model(model)
   {
     initOptix();
 
-    // 光源部分： 目前就这么一点点，而且实际上用不到
-    //launchParams.light.origin = light.origin;
-    //launchParams.light.du     = light.du;
-    //launchParams.light.dv     = light.dv；
-    //launchParams.light.power  = light.power;
-
     std::cout << "#osc: creating optix context ..." << std::endl;
     createContext();
-      
+
     std::cout << "#osc: setting up module ..." << std::endl;
     createModule();
 
@@ -60,6 +53,9 @@ namespace osc {
     createHitgroupPrograms();
 
     launchParams.traversable = buildAccel();
+
+    std::cout << "#osc: creating light material..." << std::endl;
+    createLight(light);
     
     std::cout << "#osc: setting up optix pipeline ..." << std::endl;
     createPipeline();
@@ -76,6 +72,21 @@ namespace osc {
     std::cout << GDT_TERMINAL_GREEN;
     std::cout << "#osc: Optix 7 Sample fully set up" << std::endl;
     std::cout << GDT_TERMINAL_DEFAULT;
+  }
+
+  void SampleRenderer::createLight(std::vector<LightParams> lights)
+  {
+      const int numMeshes = (int)model->meshes.size();
+      for (int meshID = 0; meshID < numMeshes; meshID++) {
+          TriangleMesh& mesh = *model->meshes[meshID];
+          if (!mesh.emissive_) continue;
+          LightParams triangle_light(TRIANGLE, mesh.index.size());
+          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission);
+          lights.push_back(triangle_light);
+      }
+      All_LightBuffer.alloc_and_upload(lights);
+      launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
+      launchParams.Lights_num = lights.size();
   }
 
   void SampleRenderer::createTextures()
@@ -584,6 +595,12 @@ namespace osc {
         rec.data.roughness = mesh->roughness;
         rec.data.metallic = mesh->metallic;
         rec.data.sheen = mesh->sheen;
+        rec.data.sheenTint = mesh->sheenTint;
+        rec.data.subsurface = mesh->subsurface;
+        rec.data.specular = mesh->specular;
+        rec.data.specularTint=mesh->specularTint;
+        rec.data.clearcoat = mesh->clearcoat;
+        rec.data.clearcoatGloss = mesh->clearcoatGloss;
         hitgroupRecords.push_back(rec);
       }
     }
@@ -619,8 +636,9 @@ namespace osc {
 
     denoiserIntensity.resize(sizeof(float));
 
+    
     OptixDenoiserParams denoiserParams;
-    denoiserParams.denoiseAlpha = 1;
+    denoiserParams.denoiseAlpha =1;
 #if OPTIX_VERSION >= 70300
     if (denoiserIntensity.sizeInBytes != sizeof(float))
         denoiserIntensity.alloc(sizeof(float));
@@ -737,6 +755,7 @@ namespace osc {
                  outputLayer.width*outputLayer.height*sizeof(float4),
                  cudaMemcpyDeviceToDevice);
     }
+    
     computeFinalPixelColors();
     
     // sync - make sure the frame is rendered before we download and

@@ -1,8 +1,6 @@
 //the main render library
 #include "SampleRenderer.h"
 
-#include "LightParams.h"
-
 // our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
@@ -14,10 +12,10 @@ namespace osc {
     SampleWindow(const std::string &title,
                  const Model *model,
                  const Camera &camera,
-                 const LightParams* light,
+                 const  std::vector<LightParams> light,
                  const float worldScale)
       : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
-        sample(model)
+        sample(model,light)
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
@@ -171,32 +169,38 @@ namespace osc {
   extern "C" int main(int ac, char **av)
   {
     try {
+        
+        // the light 
+        std::vector<LightParams> All_Lights;
+
       Model *model = loadOBJ(
 #ifdef _WIN32
       // on windows, visual studio creates _two_ levels of build dir
       // (x86/Release)
-      "../../models/sponza.obj"
+      "../../models/sponza2.obj"
 #else
       // on linux, common practice is to have ONE level of build dir
       // (say, <project>/build/)...
       "../models/sponza.obj"
 #endif
+          , All_Lights
                              ); 
       Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
                                       /* at */model->bounds.center()-vec3f(0,400,0),
                                       /* up */vec3f(0.f,1.f,0.f) };
 
-      // some simple, hard-coded light
-      LightParams envLight(ENV, 0);
-      envLight.initEnvLight(vec3f(0,0,0), 100.0f, vec3f(100.0f, 80.0f, 80.0f));
-                      
+      //LightParams quadLight(QUAD, 114514);
+
+      //quadLight.initQuadLight(vec3f(-1300, 1800, -400), vec3f(2*1300.0f, 0, 0), vec3f(0, 0, 2*400.0f), 10.0f*vec3f(1.0f, 1.0f, 1.0f));
+      //All_Lights.push_back(quadLight);
+
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
 
       const float worldScale = length(model->bounds.span());
 
       SampleWindow *window = new SampleWindow("Optix 7 Course Example",
-                                              model,camera, &envLight, worldScale);
+                                              model,camera, All_Lights, worldScale);
       window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;
