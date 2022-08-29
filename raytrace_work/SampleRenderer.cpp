@@ -80,8 +80,8 @@ namespace osc {
       for (int meshID = 0; meshID < numMeshes; meshID++) {
           TriangleMesh& mesh = *model->meshes[meshID];
           if (!mesh.emissive_) continue;
-          LightParams triangle_light(TRIANGLE, mesh.index.size());
-          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission);
+          LightParams triangle_light(TRIANGLE, meshID);
+          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
           lights.push_back(triangle_light);
       }
       All_LightBuffer.alloc_and_upload(lights);
@@ -591,7 +591,7 @@ namespace osc {
         rec.data.d = mesh->d;
         rec.data.Kr = mesh->Kr;
         rec.data.emissive_ = mesh->emissive_;
-        rec.data.ID = mesh->specTextureID;
+        rec.data.ID = meshID;
         rec.data.roughness = mesh->roughness;
         rec.data.metallic = mesh->metallic;
         rec.data.sheen = mesh->sheen;

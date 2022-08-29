@@ -47,14 +47,6 @@ illum 1
 map_Kd textures\\vase_plant.png
 map_d textures\\vase_plant_mask.png
 
-newmtl None
-Ns 500
-Ka 0.8 0.8 0.8
-Kd 0.8 0.8 0.8
-Ks 0.8 0.8 0.8
-d 1
-illum 2
-
 newmtl arch
 Ns 39.999995
 Ka 1.000000 1.000000 1.000000
@@ -220,7 +212,7 @@ Ns 10.000005
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
 Ks 0.050000 0.050000 0.050000
-Ke 10.000000 10.000000 10.000000
+Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
@@ -250,6 +242,16 @@ illum 1
 map_Bump textures\\sponza_thorn_bump.png
 map_Kd textures\\sponza_thorn_diff.png
 map_d textures\\sponza_thorn_mask.png
+
+newmtl quadlight
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 10.000000 10.000000 10.000000
+Ni 1.500000
+d 1.000000
+illum 1
 
 newmtl roof
 Ns 10.000005
@@ -297,13 +299,3 @@ d 1.000000
 illum 2
 map_Bump textures\\vase_round_bump.png
 map_Kd textures\\vase_round.png
-
-newmtl quadlight
-Ns 10.000005
-Ka 1.000000 1.000000 1.000000
-Kd 1.000000 1.000000 1.000000
-Ks 0.000000 0.000000 0.000000
-Ke 100.000000 100.000000 100.000000
-Ni 1.500000
-d 1.000000
-illum 1

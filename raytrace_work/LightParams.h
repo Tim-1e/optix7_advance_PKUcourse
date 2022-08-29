@@ -32,7 +32,8 @@ namespace osc {
 		vec3f direction;
 		LightType lightType;
 		float area;
-		int id;//store the num of the faces
+		int id;
+		int num;//store the num of the faces
 		vec3f* vertex;//the arrary of the face
 		vec3i* index;//the arrary of the face index
 		inline __both__ LightParams(LightType type, int _id) :
@@ -47,16 +48,20 @@ namespace osc {
 			area = length(u) * length(v);
 		}
 
-		inline __both__ void initTriangleLight(vec3f* mesh_vertex,vec3i* mesh_index)
+		inline __both__ void initTriangleLight(vec3f* mesh_vertex,vec3i* mesh_index, vec3f& _emission,int num_)
 		{
 			vertex = mesh_vertex;
 			index = mesh_index;
+			emission = _emission;
+			num = num_;
 		}
 
 		inline __both__ void sample(LightSample& sample, PRD& prd) {
 			// Add this prefix to try to fit in cuda
 			const float r1 = prd.random();
 			const float r2 = prd.random();
+			vec3f A, B, C;
+			int chose;
 			switch (lightType)
 			{
 			case QUAD:
@@ -64,6 +69,21 @@ namespace osc {
 				sample.normal = normal;
 				sample.emission = emission;
 				sample.pdf = 1.0 / area;
+				break;
+			case TRIANGLE:
+				chose = int(prd.random() * num);
+				A= vertex[index[chose].x];
+				B=  vertex[index[chose].y];
+				C = vertex[index[chose].z];
+				normal = normalize(cross(A - B, A - C));
+				position = A;
+				u = A - B;
+				v = A - C;
+				area = length(cross(A - B, A - C)) / 2;
+				sample.surfacePos = (1 - sqrt(r1)) * A + sqrt(r1) * (1 - r2) * B + sqrt(r1) * r2 * C;
+				sample.normal = normal;
+				sample.emission = emission;
+				sample.pdf = 1.0 / (area* num);
 				break;
 			default:
 				printf("Unrecognizable light type...\n");
@@ -74,6 +94,8 @@ namespace osc {
 
 		inline __both__ float Pdf_Light(vec3f origin,vec3f dir) {
 			vec3f cast_pos;
+			float u_cast, v_cast, u_length, v_length;
+			float mydist;
 			switch (lightType)
 			{
 			case QUAD: 
@@ -82,16 +104,31 @@ namespace osc {
 					if (dot(origin-position,normal) == 0) return 1;//在平面上,返回0
 					else return 0;//非平面,无穷
 				}
-				float mydist;
 				mydist=-dot(origin - position, normal) / dot(dir, normal);
 				if (mydist < 0) return 0;
 				if (dot(dir, normal) > 0) return 0;
 				cast_pos = mydist * dir + origin;
-				float u_cast, v_cast;
 				u_cast = dot(cast_pos - position, normalize(u));
 				v_cast = dot(cast_pos - position, normalize(v));
 				if (u_cast >= 0 && u_cast <= length(u) && v_cast >= 0 && v_cast <= length(v)) {
 					return 1.0 / area* mydist* mydist/dot(normal,-dir);
+				}
+				else
+					return 0;
+			case TRIANGLE:
+				//Plane insert
+				if (dot(normal, dir) == 0) {//判断有无交点
+					if (dot(origin - position, normal) == 0) return 1;//在平面上,返回0
+					else return 0;//非平面,无穷
+				}
+				mydist = -dot(origin - position, normal) / dot(dir, normal);
+				if (mydist < 0) return 0;
+				if (dot(dir, normal) > 0) return 0;
+				cast_pos = mydist * dir + origin;
+				u_cast = dot(cast_pos - position, normalize(u));
+				v_cast = dot(cast_pos - position, normalize(v));
+				if (u_cast >= 0 && v_cast >= 0 && v_cast*u_length+u_cast*v_length<=u_length*v_length) {
+					return 1.0 / (area * num) * mydist * mydist / dot(normal, -dir);
 				}
 				else
 					return 0;

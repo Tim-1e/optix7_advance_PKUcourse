@@ -42,7 +42,12 @@ namespace osc
 
     extern "C" __global__ void __closesthit__shadow()
     {
-        /* not going to be used ... */
+        const TriangleMeshSBTData& sbtData
+            = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
+        int& dir_hit = *getPRD<int>();
+        if (dir_hit == sbtData.ID) {
+            dir_hit = -1;
+        }
     }
 
     extern "C" __global__ void __closesthit__radiance()
@@ -56,7 +61,7 @@ namespace osc
             return;
         }
         if (sbtData.emissive_) {
-            std::printf("emissive object hit\n");
+            //printf("emissive object hit\n");
             prd.pixelColor = sbtData.emission*prd.throughout;
             return;
         }
@@ -133,7 +138,6 @@ namespace osc
 
         // ------------------------------------------------------------------
         //Begin of the true brdf
-        //
         // ------------------------------------------------------------------
 
         PRD newprd;//ÐÂ¹âÏß
@@ -151,10 +155,10 @@ namespace osc
         weight *= num;
         LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
         LightSample Light_point;
-
         Lp->sample(Light_point, prd);
 
-        int dir_hit = 0;
+        /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
+        int dir_hit = Lp->id;
         packPointer(&dir_hit, u0, u1);
         vec3f lightDir = normalize(Light_point.surfacePos - surfPos);
         optixTrace(optixLaunchParams.traversable,
@@ -164,22 +168,16 @@ namespace osc
             1e20f,  // tmax
             0.0f,   // rayTime
             OptixVisibilityMask(255),
-            // For shadow rays: skip any/closest hit shaders and terminate on first
-            // intersection with anything. The miss shader is used to mark if the
-            // light was visible.
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT
-            | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
-            | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
             SHADOW_RAY_TYPE,            // SBT offset
             RAY_TYPE_COUNT,               // SBT stride
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        
-        if (dir_hit) {
+
+        if ( dir_hit==-1) {
             float dis = length(Light_point.surfacePos - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
-            //vec3f Dir_color_contri = prd.throughout *weight/RR*Light_point.emission ;
-            vec3f Dir_color_contri = prd.throughout * weight / RR * Light_point.emission;
+            vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
             vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
             pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
         }
@@ -207,7 +205,7 @@ namespace osc
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
         pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Lp->Pdf_Light(surfPos, mont_dir));
-        //pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir));
+        //pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir) ;
 
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
@@ -232,27 +230,14 @@ namespace osc
 
     extern "C" __global__ void __miss__radiance()
     {
-
         PRD &prd = *getPRD<PRD>();
-
-        // set to constant white as background color
-        LightParams* Lp = &optixLaunchParams.All_Lights[0];
-        const vec3f rayDir = optixGetWorldRayDirection();
-        
-        if (Lp->Pdf_Light(prd.sourcePos, rayDir) > 0)
-        {
-            prd.pixelColor = Lp->emission * prd.throughout;
-            //std::printf("i hit the light!\n");
-        }
-        else
-            prd.pixelColor = 0.f;
+        prd.pixelColor = 0.f;
     }
 
     extern "C" __global__ void __miss__shadow()
     {
-        int& dir_hit = *getPRD<int>();
-        // set to constant white as background color
-        dir_hit = 1;
+        //int& dir_hit = *getPRD<int>();
+        //dir_hit = 1;
     }
 
     //------------------------------------------------------------------------------
