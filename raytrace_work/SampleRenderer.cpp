@@ -41,9 +41,6 @@ namespace osc {
 
     std::cout << "#osc: creating optix context ..." << std::endl;
     createContext();
-      
-    std::cout << "#osc: creating light ext ..." << std::endl;
-    createLight(light);
 
     std::cout << "#osc: setting up module ..." << std::endl;
     createModule();
@@ -59,6 +56,9 @@ namespace osc {
     createHitgroupPrograms();
 
     launchParams.traversable = buildAccel();
+
+    std::cout << "#osc: creating light material..." << std::endl;
+    createLight(light);
     
     std::cout << "#osc: setting up optix pipeline ..." << std::endl;
     createPipeline();
@@ -79,6 +79,14 @@ namespace osc {
 
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
+      const int numMeshes = (int)model->meshes.size();
+      for (int meshID = 0; meshID < numMeshes; meshID++) {
+          TriangleMesh& mesh = *model->meshes[meshID];
+          if (!mesh.emissive_) continue;
+          LightParams triangle_light(TRIANGLE, meshID);
+          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
+          lights.push_back(triangle_light);
+      }
       All_LightBuffer.alloc_and_upload(lights);
       launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
       launchParams.Lights_num = lights.size();
@@ -586,7 +594,7 @@ namespace osc {
         rec.data.d = mesh->d;
         rec.data.Kr = mesh->Kr;
         rec.data.emissive_ = mesh->emissive_;
-        rec.data.ID = mesh->specTextureID;
+        rec.data.ID = meshID;
         rec.data.roughness = mesh->roughness;
         rec.data.metallic = mesh->metallic;
         rec.data.sheen = mesh->sheen;
@@ -633,7 +641,9 @@ namespace osc {
 
     
     OptixDenoiserParams denoiserParams;
+
     denoiserParams.denoiseAlpha = static_cast<OptixDenoiserAlphaMode>(1);
+
 #if OPTIX_VERSION >= 70300
     if (denoiserIntensity.sizeInBytes != sizeof(float))
         denoiserIntensity.alloc(sizeof(float));

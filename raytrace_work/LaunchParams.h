@@ -78,7 +78,6 @@ namespace osc {
     } camera;
 
     LightParams* All_Lights;
-    int* testptr;
     int Lights_num;
 
     OptixTraversableHandle traversable;

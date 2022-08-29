@@ -169,28 +169,30 @@ namespace osc {
   extern "C" int main(int ac, char **av)
   {
     try {
+        
+        // the light 
+        std::vector<LightParams> All_Lights;
+
       Model *model = loadOBJ(
 #ifdef _WIN32
       // on windows, visual studio creates _two_ levels of build dir
       // (x86/Release)
-      "../../models/sponza.obj"
+      "../../models/sponza2.obj"
 #else
       // on linux, common practice is to have ONE level of build dir
       // (say, <project>/build/)...
-      "../models/sponza.obj"
+      "../models/sponza2.obj"
 #endif
+          , All_Lights
                              ); 
       Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
                                       /* at */model->bounds.center()-vec3f(0,400,0),
                                       /* up */vec3f(0.f,1.f,0.f) };
 
-      // some simple, hard-coded light
-      std::vector<LightParams> All_Lights;
+      //LightParams quadLight(QUAD, 114514);
 
-      LightParams quadLight(QUAD, 114514);
-
-      quadLight.initQuadLight(vec3f(-1300, 1800, -400), vec3f(2*1300.0f, 0, 0), vec3f(0, 0, 2*400.0f), 10.0f*vec3f(1.0f, 1.0f, 1.0f));
-      All_Lights.push_back(quadLight);
+      //quadLight.initQuadLight(vec3f(-1300, 1800, -400), vec3f(2*1300.0f, 0, 0), vec3f(0, 0, 2*400.0f), 10.0f*vec3f(1.0f, 1.0f, 1.0f));
+      //All_Lights.push_back(quadLight);
 
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:

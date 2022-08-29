@@ -17,6 +17,7 @@
 #pragma once
 
 #include "gdt/math/AffineSpace.h"
+#include "LaunchParams.h"
 #include <vector>
 
 /*! \namespace osc - Optix Siggraph Course */
@@ -81,5 +82,5 @@ namespace osc {
     box3f bounds;
   };
 
-  Model *loadOBJ(const std::string &objFile);
+  Model *loadOBJ(const std::string &objFile, std::vector<LightParams>& lights);
 }
