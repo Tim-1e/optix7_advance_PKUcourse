@@ -183,6 +183,7 @@ namespace osc
             vec3f Dir_color_contri = prd.throughout * weight / RR * Light_point.emission;
             vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
             pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+            //pixelColor += Dir_color_contri / (True_pdf);
         }
         
             
@@ -235,7 +236,8 @@ namespace osc
     {
 
         PRD &prd = *getPRD<PRD>();
-
+        //prd.pixelColor = 0.0f;
+        //return;
         // set to constant white as background color
         LightParams* Lp = &optixLaunchParams.All_Lights[0];
         const vec3f rayDir = optixGetWorldRayDirection();
@@ -247,7 +249,7 @@ namespace osc
         }
         else if (prd.depth == 0)
         {
-            prd.pixelColor = 0.5f;
+            prd.pixelColor = 0.0f;
         }
         else
             prd.pixelColor = 0.f;
