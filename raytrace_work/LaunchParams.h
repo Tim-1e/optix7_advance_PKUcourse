@@ -82,5 +82,5 @@ namespace osc {
 
     OptixTraversableHandle traversable;
   };
-
+  
 } // ::osc

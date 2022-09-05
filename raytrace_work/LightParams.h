@@ -89,9 +89,9 @@ namespace osc {
 				C = vertex[index[chose].z];
 				normal = normalize(cross(A - B, A - C));
 				position = A;
-				u = A - B;
-				v = A - C;
-				area = length(cross(A - B, A - C)) / 2;
+				u = B - A;
+				v = C - A;
+				area = length(cross(u, v)) / 2;
 				sample.surfacePos = (1 - sqrt(r1)) * A + sqrt(r1) * (1 - r2) * B + sqrt(r1) * r2 * C;
 				sample.normal = normal;
 				sample.emission = emission;
@@ -108,6 +108,8 @@ namespace osc {
 			vec3f cast_pos;
 			float u_cast, v_cast, u_length, v_length;
 			float mydist;
+			vec3f z;
+			float zdu, zdv, udu, vdv, udv, x, y;
 			switch (lightType)
 			{
 			case QUAD: 
@@ -138,13 +140,26 @@ namespace osc {
 				if (mydist < 0) return 0;
 				if (dot(dir, normal) > 0) return 0;
 				cast_pos = mydist * dir + origin;
-				u_cast = dot(cast_pos - position, normalize(u));
-				v_cast = dot(cast_pos - position, normalize(v));
-				if (u_cast >= 0 && v_cast >= 0 && v_cast*u_length+u_cast*v_length<=u_length*v_length) {
+				z = cast_pos - position;
+				zdu = dot(z, u);
+				zdv = dot(z, v);
+				udu = dot(u, u);
+				vdv = dot(v, v);
+				udv = dot(u, v);
+				y = (zdu * udv - zdv * udu) / (udv * udv - udu * udu);
+				x = (zdv * udv - zdu * vdv) / (udv * udv - vdv * vdv);
+				if (x >= 0 && y >= 0 && x + y <= 1)
 					return 1.0 / (area * num) * mydist * mydist / dot(normal, -dir);
-				}
 				else
 					return 0;
+				//u_cast = dot(cast_pos - position, normalize(u));
+				//v_cast = dot(cast_pos - position, normalize(v));
+
+				//if (u_cast >= 0 && v_cast >= 0 && v_cast*u_length+u_cast*v_length<=u_length*v_length) {
+				//	return 1.0 / (area * num) * mydist * mydist / dot(normal, -dir);
+				//}
+				//else
+				//	return 0;
 			default:
 				printf("Unrecognizable light type...\n");
 				break;

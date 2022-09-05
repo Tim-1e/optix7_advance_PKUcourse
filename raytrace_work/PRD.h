@@ -16,9 +16,9 @@ namespace osc {
         vec3f  pixelNormal;
         vec3f  pixelAlbedo;
         vec3f  sourcePos;
+        //std::vector<BDPTVertex> Vertexs;
         //float refraction_index;//当前光线相对于空气的折射率
     };
-
     struct M_extansion {
         vec3f diffuseColor;
         vec3f specColor;

@@ -45,9 +45,6 @@ namespace osc {
     std::cout << "#osc: setting up module ..." << std::endl;
     createModule();
 
-    std::cout << "#osc: creating light ext ..." << std::endl;
-    createLight(light);
-
     std::cout << "#osc: creating raygen programs ..." << std::endl;
     createRaygenPrograms();
     std::cout << "#osc: creating miss programs ..." << std::endl;
@@ -80,13 +77,16 @@ namespace osc {
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
       const int numMeshes = (int)model->meshes.size();
+      std::cout << vertexBuffer.size() << std::endl;
       for (int meshID = 0; meshID < numMeshes; meshID++) {
           TriangleMesh& mesh = *model->meshes[meshID];
           if (!mesh.emissive_) continue;
           LightParams triangle_light(TRIANGLE, meshID);
-          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
+          std::cout << meshID << std::endl;
+          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, 1);
           lights.push_back(triangle_light);
       }
+      std::cout << lights.size()<<std::endl;
       All_LightBuffer.alloc_and_upload(lights);
       launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
       launchParams.Lights_num = lights.size();

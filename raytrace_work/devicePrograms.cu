@@ -19,6 +19,7 @@
 #include <vector>
 #include "LaunchParams.h"
 #include "tool_function.h"
+#include "BDPT.h"
 
 using namespace osc;
 
@@ -147,7 +148,6 @@ namespace osc
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
-
         //直接光
         int num = optixLaunchParams.Lights_num;
         weight *= num;
@@ -177,7 +177,7 @@ namespace osc
             float dis = length(Light_point.surfacePos - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
-            vec3f True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
+            float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
             pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
         }
         
@@ -287,6 +287,7 @@ namespace osc
             prd.depth = 0;
             prd.throughout = 1.f;
             prd.sourcePos = camera.position;
+
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
