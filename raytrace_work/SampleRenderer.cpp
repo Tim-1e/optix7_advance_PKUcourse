@@ -642,7 +642,7 @@ namespace osc {
     
     OptixDenoiserParams denoiserParams;
 
-    denoiserParams.denoiseAlpha = static_cast<OptixDenoiserAlphaMode>(1);
+    denoiserParams.denoiseAlpha =1;
 
 #if OPTIX_VERSION >= 70300
     if (denoiserIntensity.sizeInBytes != sizeof(float))

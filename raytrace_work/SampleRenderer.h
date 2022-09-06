@@ -45,6 +45,7 @@ namespace osc {
     
     bool denoiserOn = false;
     bool accumulate = true;
+    bool move_available = true;
   protected:
 
 
