@@ -124,11 +124,11 @@ namespace osc {
 
       if (key == 334) {
           cameraFrame.motionSpeed += 1.0f;
-          std::cout<<"Speed up now the speed if"<<cameraFrame.motionSpeed<<std::endl;
+          std::cout<<"Speed up now the speed is"<<cameraFrame.motionSpeed<<std::endl;
       }
       if (key == 333) {
           cameraFrame.motionSpeed /= 2.0f;
-          std::cout << "Speed down now the speed if" << cameraFrame.motionSpeed << std::endl;
+          std::cout << "Speed down now the speed is" << cameraFrame.motionSpeed << std::endl;
       }
     }
     
