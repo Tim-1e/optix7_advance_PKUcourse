@@ -159,7 +159,7 @@ namespace osc
         int dir_hit = Lp->id;
 
         packPointer(&dir_hit, u0, u1);
-        vec3f lightDir = normalize(Light_point.surfacePos - surfPos);
+        vec3f lightDir = normalize(Light_point.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             lightDir,
@@ -174,7 +174,7 @@ namespace osc
             u0, u1);
 
         if ( dir_hit==-1) {
-            float dis = length(Light_point.surfacePos - surfPos);
+            float dis = length(Light_point.position - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
             float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
@@ -203,7 +203,7 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Lp->Pdf_Light(surfPos, mont_dir));
+        pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Light_point.Pdf_Light(surfPos, mont_dir));
         //pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir) ;
 
         prd.pixelNormal = Ns;

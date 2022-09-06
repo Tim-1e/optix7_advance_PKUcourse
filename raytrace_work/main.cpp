@@ -132,6 +132,10 @@ namespace osc {
         sample.accumulate = !sample.accumulate;
         std::cout << "accumulation/progressive refinement now " << (sample.accumulate?"ON":"OFF") << std::endl;
       }
+      if (key == 'e' || key == 'E') {
+          sample.move_available = !sample.move_available;
+          std::cout << "Move mode now is" << sample.move_available << std::endl;
+      }
       if (key == ',') {
         sample.launchParams.numPixelSamples
           = std::max(1,sample.launchParams.numPixelSamples-1);
@@ -155,17 +159,19 @@ namespace osc {
 
       if (key == 334) {
           cameraFrame.motionSpeed += 1.0f;
-          std::cout<<"Speed up now the speed if"<<cameraFrame.motionSpeed<<std::endl;
+          std::cout<<"Speed up now the speed is"<<cameraFrame.motionSpeed<<std::endl;
       }
       if (key == 333) {
           cameraFrame.motionSpeed /= 2.0f;
-          std::cout << "Speed down now the speed if" << cameraFrame.motionSpeed << std::endl;
+          std::cout << "Speed down now the speed is" << cameraFrame.motionSpeed << std::endl;
       }
     }
     
     virtual void processInput() {
         if (glfwGetKey(handle, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(handle, true);
+        if (sample.move_available)
+            return;
         if (glfwGetKey(handle, GLFW_KEY_W) == GLFW_PRESS) {
             cameraFrame.position -= cameraFrame.frame.vz * cameraFrame.motionSpeed;
             cameraFrame.modified = true;
