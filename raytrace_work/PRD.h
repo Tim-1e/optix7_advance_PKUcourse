@@ -6,8 +6,6 @@ namespace osc {
     using namespace gdt;
     typedef LCG<16> Random;
 
-    /*! per-ray data now captures random number generator, so programs
-            can access RNG state */
     struct PRD {
         Random random;
         int depth;

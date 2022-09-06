@@ -28,6 +28,7 @@ add_executable(raytrace_work
   toneMap.cu
   BDPT.h
   BDPT_function.h
+  config.h
   CUDABuffer.h
   LaunchParams.h
   LightParams.h
