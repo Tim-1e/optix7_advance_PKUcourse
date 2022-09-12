@@ -25,18 +25,21 @@ cuda_add_library(toneMap
 add_executable(raytrace_work
   ${embedded_ptx_code}
   devicePrograms.cu
-  optix7.h
+  toneMap.cu
+  config.h
   CUDABuffer.h
   BDPT.h
-  PRD.h
   BDPT_function.h
   LaunchParams.h
   LightParams.h
-  SampleRenderer.h
-  SampleRenderer.cpp
   Model.h
-  Model.cpp
+  optix7.h
+  PRD.h
+  SampleRenderer.h
+  tool_function.h
   main.cpp
+  Model.cpp
+  SampleRenderer.cpp
   )
 
 target_link_libraries(raytrace_work

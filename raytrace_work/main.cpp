@@ -1,9 +1,18 @@
 //the main render library
 #include "SampleRenderer.h"
 
+// program configuration
+#include "config.h"
+
 // our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "3rdParty/stb_image_write.h"
+
+#include <time.h>
+#include <algorithm>
 
 namespace osc {
 
@@ -14,11 +23,12 @@ namespace osc {
                  const Camera &camera,
                  const  std::vector<LightParams> light,
                  const float worldScale)
-      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
+      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale, FIXED_CAMERA, VISIBLE_MOUSE),
         sample(model,light)
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
+      startTime = clock();
     }
     
     virtual void render() override
@@ -35,6 +45,7 @@ namespace osc {
     virtual void draw() override
     {
       sample.downloadPixels(pixels.data());
+
       if (fbTexture == 0)
         glGenTextures(1, &fbTexture);
       
@@ -78,8 +89,32 @@ namespace osc {
         glVertex3f((float)fbSize.x, 0.f, 0.f);
       }
       glEnd();
+
+      // Warning: this function will reverse vector "pixels" ! 
+      if (DOWNLOAD) savePicture();
     }
     
+    void savePicture() 
+    {
+        std::reverse(pixels.begin(), pixels.end());
+        int currentTime = clock();
+        int deltaTime = currentTime - startTime;
+        for (int i = 0; i < myTime.len; ++i) {
+            if (!myTime.timeFlag[i] && deltaTime > myTime.timeStamp[i]) {
+                myTime.timeFlag[i] = true;
+                _savePicture(std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]).append(".png"));
+                std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
+            }
+        }
+
+    }
+
+    void _savePicture(std::string fileName)
+    {
+        stbi_write_png(fileName.c_str(), fbSize.x, fbSize.y, 4,
+            pixels.data(), fbSize.x * sizeof(uint32_t));
+    }
+
     virtual void resize(const vec2i &newSize) 
     {
       fbSize = newSize;
@@ -96,6 +131,10 @@ namespace osc {
       if (key == 'X' || key == 'x') {
         sample.accumulate = !sample.accumulate;
         std::cout << "accumulation/progressive refinement now " << (sample.accumulate?"ON":"OFF") << std::endl;
+      }
+      if (key == 'e' || key == 'E') {
+          sample.move_available = !sample.move_available;
+          std::cout << "Move mode now is" << sample.move_available << std::endl;
       }
       if (key == ',') {
         sample.launchParams.numPixelSamples
@@ -120,17 +159,19 @@ namespace osc {
 
       if (key == 334) {
           cameraFrame.motionSpeed += 1.0f;
-          std::cout<<"Speed up now the speed if"<<cameraFrame.motionSpeed<<std::endl;
+          std::cout<<"Speed up now the speed is"<<cameraFrame.motionSpeed<<std::endl;
       }
       if (key == 333) {
           cameraFrame.motionSpeed /= 2.0f;
-          std::cout << "Speed down now the speed if" << cameraFrame.motionSpeed << std::endl;
+          std::cout << "Speed down now the speed is" << cameraFrame.motionSpeed << std::endl;
       }
     }
     
     virtual void processInput() {
         if (glfwGetKey(handle, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(handle, true);
+        if (sample.move_available)
+            return;
         if (glfwGetKey(handle, GLFW_KEY_W) == GLFW_PRESS) {
             cameraFrame.position -= cameraFrame.frame.vz * cameraFrame.motionSpeed;
             cameraFrame.modified = true;
@@ -161,11 +202,16 @@ namespace osc {
     GLuint                fbTexture {0};
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
+    int startTime;
+    struct timeStruct
+    {
+        const int len = 7;
+        bool timeFlag[7] = { 0 };
+        std::string timeStampStr[7] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s"};
+        int timeStamp[7] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000 };
+    } myTime;
   };
-  
-  
-  /*! main entry point to this example - initially optix, print hello
-    world, then exit */
+
   extern "C" int main(int ac, char **av)
   {
     try {
@@ -189,19 +235,14 @@ namespace osc {
                                       /* at */model->bounds.center()-vec3f(0,400,0),
                                       /* up */vec3f(0.f,1.f,0.f) };
 
-      //LightParams quadLight(QUAD, 114514);
-
-      //quadLight.initQuadLight(vec3f(-1300, 1800, -400), vec3f(2*1300.0f, 0, 0), vec3f(0, 0, 2*400.0f), 10.0f*vec3f(1.0f, 1.0f, 1.0f));
-      //All_Lights.push_back(quadLight);
-
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
 
       const float worldScale = length(model->bounds.span());
 
-      SampleWindow *window = new SampleWindow("Optix 7 Course Example",
+      SampleWindow *window = new SampleWindow("BDPT",
                                               model,camera, All_Lights, worldScale);
-      window->enableFlyMode();
+      //window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;
       std::cout << "Press 'X' to enable/disable denoising" << std::endl;
@@ -219,4 +260,4 @@ namespace osc {
     return 0;
   }
   
-} // ::osc
+} 
