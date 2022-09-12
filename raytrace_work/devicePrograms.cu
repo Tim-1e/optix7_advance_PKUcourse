@@ -55,13 +55,14 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 8;
+        const int Maxdepth = 7;
         if (prd.depth >= Maxdepth) {
             prd.pixelColor = 0.0f;
             return;
         }
         if (sbtData.emissive_) {
             prd.pixelColor = sbtData.emission*prd.throughout;
+            //prd.pixelColor = 0.f;
             return;
         }
         // ------------------------------------------------------------------
@@ -158,6 +159,7 @@ namespace osc
         /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
         int dir_hit = Lp->id;
 
+        //printf("dire light trace in %d\n", sbtData.ID);
         packPointer(&dir_hit, u0, u1);
         vec3f lightDir = normalize(Light_point.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
@@ -167,20 +169,24 @@ namespace osc
             1e20f,  // tmax
             0.0f,   // rayTime
             OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+            OPTIX_RAY_FLAG_DISABLE_ANYHIT, 
             SHADOW_RAY_TYPE,            // SBT offset
             RAY_TYPE_COUNT,               // SBT stride
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-
+        //printf("dire light trace out %d\n", sbtData.ID);
+        //printf("dire light calculate in %d\n", sbtData.ID);
         if ( dir_hit==-1) {
             float dis = length(Light_point.position - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
             float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
-            pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+            float Pdf_All = True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir);
+            //float Pdf_All = True_pdf;
+            Pdf_All = max(1e-5f, Pdf_All);
+            pixelColor+= Dir_color_contri / Pdf_All;
         }
-        
+        //printf("dire light calculate out %d\n", sbtData.ID);
             
         //¼ä½Ó¹â
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
@@ -189,8 +195,9 @@ namespace osc
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
-        newprd.throughout = prd.throughout*weight/RR;
+        newprd.throughout = min(prd.throughout*weight/RR,vec3f(1e3f));
         newprd.sourcePos = surfPos;
+        //printf("bias light trace out %d\n", sbtData.ID);
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             mont_dir,
@@ -203,12 +210,19 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Light_point.Pdf_Light(surfPos, mont_dir));
+        //printf("bias light trace out %d\n", sbtData.ID);
+        //printf("bias light calculate out %d\n", sbtData.ID);
+        float Pdf_All = Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Light_point.Pdf_Light(surfPos, mont_dir);
+        //float Pdf_All = Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
+        Pdf_All = max(1e-5f, Pdf_All);
+
+        pixelColor += newprd.pixelColor / Pdf_All;
+        //printf("bias light calculate out %d\n", sbtData.ID);
         //pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir) ;
 
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
-        prd.pixelColor = pixelColor;
+        prd.pixelColor = max(pixelColor,vec3f(0.f));
     }
 
     extern "C" __global__ void __anyhit__radiance()
