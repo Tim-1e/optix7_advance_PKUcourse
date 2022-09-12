@@ -27,7 +27,11 @@ add_executable(raytrace_work
   devicePrograms.cu
   optix7.h
   CUDABuffer.h
+  BDPT.h
+  PRD.h
+  BDPT_function.h
   LaunchParams.h
+  LightParams.h
   SampleRenderer.h
   SampleRenderer.cpp
   Model.h

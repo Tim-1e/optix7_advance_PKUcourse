@@ -55,13 +55,14 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 8;
+        const int Maxdepth = 10;
         if (prd.depth >= Maxdepth) {
             prd.pixelColor = 0.0f;
             return;
         }
         if (sbtData.emissive_) {
             prd.pixelColor = sbtData.emission*prd.throughout;
+
             return;
         }
         // ------------------------------------------------------------------
@@ -153,7 +154,7 @@ namespace osc
         weight *= num;
         LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
         LightSample Light_point;
-        Lp->sample(Light_point, prd);
+        Lp->sample(Light_point, prd.random);
 
         /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
         int dir_hit = Lp->id;
