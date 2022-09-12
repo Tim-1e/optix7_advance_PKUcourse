@@ -1,5 +1,3 @@
-// 目前只实现面光源、球形光源、环境光、点光源
-// 待实现物体光源、方向光
 #pragma once
 #include "optix7.h"
 #include "PRD.h"

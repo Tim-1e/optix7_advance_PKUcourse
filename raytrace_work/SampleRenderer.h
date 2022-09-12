@@ -18,8 +18,7 @@ namespace osc {
   
   /*! a sample OptiX-7 renderer that demonstrates how to set up
       context, module, programs, pipeline, SBT, etc, and perform a
-      valid launch that renders some pixel (using a simple test
-      pattern, in this case */
+      valid launch that renders some pixel */
   class SampleRenderer
   {
     // ------------------------------------------------------------------
@@ -48,7 +47,6 @@ namespace osc {
     bool move_available = true;
   protected:
 
-
     // ------------------------------------------------------------------
     // internal helper functions
     // ------------------------------------------------------------------
@@ -62,7 +60,7 @@ namespace osc {
     /*! initial our light */
     void createLight(std::vector<LightParams> light);
 
-    /*! creates and configures a optix device context (in this simple
+    /*! creates and configures a optix device context (in this
       example, only for the primary GPU device) */
     void createContext();
 

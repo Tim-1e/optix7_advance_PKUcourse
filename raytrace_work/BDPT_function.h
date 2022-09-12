@@ -4,7 +4,8 @@
 #include "tool_function.h"
 
 namespace ocs {
-    __forceinline__ __device__ vec3f evalPath(std::vector<BDPTVertex>& path)
+    using namespace gdt;
+    __forceinline__ __device__ vec3f evalPath(std::vector<osc::BDPTVertex>& path)
     {
         float pdf = 0.0f;
         vec3f contri;
