@@ -17,9 +17,7 @@
 #include <optix_device.h>
 #include <cuda_runtime.h>
 #include <vector>
-#include "LaunchParams.h"
 #include "tool_function.h"
-#include "BDPT.h"
 
 using namespace osc;
 

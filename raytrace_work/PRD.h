@@ -2,6 +2,7 @@
 #include "gdt/math/vec.h"
 #include "gdt/random/random.h"
 #include "BDPT.h"
+
 namespace osc {
     using namespace gdt;
     typedef LCG<16> Random;

@@ -82,7 +82,7 @@ namespace osc {
             vec3f lightDirection = normalize(lightLine);
             pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
 
-            /*��������ǵ��µ�pdf*/
+
             for (int i = 1; i < lightPathLength; i++)
             {
                 BDPTVertex& midPoint = path.vertexs[path.length - i - 1];
@@ -103,7 +103,7 @@ namespace osc {
             }
 
         }
-        /*����ͶӰ�ǵ��µ�pdf�仯*/
+
         for (int i = 1; i < eyePathLength; i++)
         {
             BDPTVertex& midPoint = path.vertexs[i];
@@ -112,7 +112,7 @@ namespace osc {
             vec3f lineDirection = normalize(line);
             pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
         }
-        /*��������ĸ���*/
+
         for (int i = 1; i < eyePathLength - 1; i++)
         {
             BDPTVertex& midPoint = path.vertexs[i];

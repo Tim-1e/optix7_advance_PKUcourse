@@ -1,6 +1,5 @@
 #pragma once
 #include "gdt/random/random.h"
-#include "LaunchParams.h"
 #include "PRD.h"
 
   namespace osc {
@@ -195,7 +194,7 @@
 
             float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
 
-            vec3f half = AxisAngle(N, 2 * cosTheta * cosTheta - 1, phi);
+            vec3f half = AxisAngle(N, cosTheta * cosTheta, phi);
 
             dir = 2.0f * dot(V, half) * half - V; //reflection vector
 
