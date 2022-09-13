@@ -20,7 +20,6 @@
 #include "config.h"
 #include "LaunchParams.h"
 #include "tool_function.h"
-#include "BDPT.h"
 
 using namespace osc;
 
@@ -168,11 +167,13 @@ namespace osc
         weight *= num;
         LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
         LightSample Light_point;
-        Lp->sample(Light_point, prd,int(Lp->num*prd.random()));
+
+        Lp->sample(Light_point, prd.random,int(Lp->num*prd.random()));
 
         /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
         int dir_hit = Lp->id;
 
+        //printf("dire light trace in %d\n", sbtData.ID);
         packPointer(&dir_hit, u0, u1);
         vec3f lightDir = normalize(Light_point.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
@@ -182,13 +183,14 @@ namespace osc
             1e20f,  // tmax
             0.0f,   // rayTime
             OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+            OPTIX_RAY_FLAG_DISABLE_ANYHIT, 
             SHADOW_RAY_TYPE,            // SBT offset
             RAY_TYPE_COUNT,               // SBT stride
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
 
         if (dir_hit == -1) {
+
             float dis = length(Light_point.position - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
@@ -213,8 +215,9 @@ namespace osc
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
-        newprd.throughout = prd.throughout*weight/RR;
+        newprd.throughout = min(prd.throughout*weight/RR,vec3f(1e3f));
         newprd.sourcePos = surfPos;
+        //printf("bias light trace out %d\n", sbtData.ID);
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             mont_dir,
@@ -241,7 +244,7 @@ namespace osc
                 {
                     LightParams* hit_light = &optixLaunchParams.All_Lights[i];
                     LightSample hit_point;
-                    hit_light->sample(hit_point, newprd, newprd.PrimId);
+                    hit_light->sample(hit_point, newprd.random, newprd.PrimId);
                     light_pdf += hit_point.Pdf_Light(surfPos, mont_dir);
                     break;
                 }
@@ -253,7 +256,7 @@ namespace osc
         
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
-        prd.pixelColor = pixelColor;
+        prd.pixelColor = max(pixelColor,vec3f(0.f));
     }
 
     extern "C" __global__ void __anyhit__radiance()

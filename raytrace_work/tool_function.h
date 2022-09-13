@@ -1,6 +1,5 @@
 #pragma once
 #include "gdt/random/random.h"
-#include "LaunchParams.h"
 #include "PRD.h"
 
   namespace osc {

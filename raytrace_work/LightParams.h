@@ -1,12 +1,12 @@
 #pragma once
 #include "optix7.h"
-#include "PRD.h"
+#include "gdt/random/random.h"
 
 #define M_PIf 3.14159265359
 
 namespace osc {
 	using namespace gdt;
-
+	typedef LCG<16> Random;
 	enum LightType {
 		QUAD, TRIANGLE, LightTypeNum
 	};
@@ -71,10 +71,10 @@ namespace osc {
 			num = num_;
 		}
 
-		inline __both__ void sample(LightSample& sample, PRD& prd, int chose) {
+		inline __both__ void sample(LightSample& sample, Random& rdm, int chose) {
 			// Add this prefix to try to fit in cuda
-			const float r1 = prd.random();
-			const float r2 = prd.random();
+			const float r1 = rdm();
+			const float r2 = rdm();
 			vec3f A, B, C, uu, vv;
 			A = vertex[index[chose].x];
 			B = vertex[index[chose].y];

@@ -82,7 +82,6 @@ namespace osc {
           TriangleMesh& mesh = *model->meshes[meshID];
           if (!mesh.emissive_) continue;
           LightParams triangle_light(TRIANGLE, meshID);
-          std::cout << meshID << std::endl;
           triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
           lights.push_back(triangle_light);
       }
@@ -641,6 +640,7 @@ namespace osc {
 
     
     OptixDenoiserParams denoiserParams;
+
 #if OPTIX_VERSION >= 70500
     denoiserParams.denoiseAlpha =static_cast<OptixDenoiserAlphaMode>(1);
 #else

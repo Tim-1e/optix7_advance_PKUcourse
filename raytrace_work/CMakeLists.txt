@@ -26,10 +26,10 @@ add_executable(raytrace_work
   ${embedded_ptx_code}
   devicePrograms.cu
   toneMap.cu
-  BDPT.h
-  BDPT_function.h
   config.h
   CUDABuffer.h
+  BDPT.h
+  BDPT_function.h
   LaunchParams.h
   LightParams.h
   Model.h
