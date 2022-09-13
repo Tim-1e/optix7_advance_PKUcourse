@@ -204,8 +204,8 @@ namespace osc {
           if (mesh->emission.x + mesh->emission.y + mesh->emission.z > 0.1) mesh->emissive_ = 1;
           mesh->Kr = (const float&)materials[materialID].ior;
           mesh->d = (const float&)materials[materialID].dissolve;
-          mesh->roughness = materials[materialID].roughness;
-          mesh->metallic = materials[materialID].metallic;
+          mesh->roughness = 0.002f; //materials[materialID].roughness;
+          mesh->metallic = 0.0f; //materials[materialID].metallic;
           mesh->sheen = materials[materialID].sheen;
           //the deflaut const
           mesh->subsurface = 0.f;

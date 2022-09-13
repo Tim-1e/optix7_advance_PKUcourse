@@ -23,7 +23,7 @@ namespace osc {
                  const Camera &camera,
                  const  std::vector<LightParams> light,
                  const float worldScale)
-      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale, FIXED_CAMERA, VISIBLE_MOUSE),
+      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale, VISIBLE_MOUSE),
         sample(model,light)
     {
       sample.setCamera(camera);
@@ -33,7 +33,7 @@ namespace osc {
     
     virtual void render() override
     {
-      if (cameraFrame.modified) {
+      if (cameraFrame.modified && !FIXED_CAMERA) {
         sample.setCamera(Camera{ cameraFrame.get_from(),
                                  cameraFrame.get_at(),
                                  cameraFrame.get_up() });
@@ -102,17 +102,11 @@ namespace osc {
         for (int i = 0; i < myTime.len; ++i) {
             if (!myTime.timeFlag[i] && deltaTime > myTime.timeStamp[i]) {
                 myTime.timeFlag[i] = true;
-                _savePicture(std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]).append(".png"));
+                stbi_write_png(std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]).append(".png").c_str(),
+                    fbSize.x, fbSize.y, 4, pixels.data(), fbSize.x * sizeof(uint32_t));
                 std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
             }
         }
-
-    }
-
-    void _savePicture(std::string fileName)
-    {
-        stbi_write_png(fileName.c_str(), fbSize.x, fbSize.y, 4,
-            pixels.data(), fbSize.x * sizeof(uint32_t));
     }
 
     virtual void resize(const vec2i &newSize) 
@@ -219,18 +213,7 @@ namespace osc {
         // the light 
         std::vector<LightParams> All_Lights;
 
-      Model *model = loadOBJ(
-#ifdef _WIN32
-      // on windows, visual studio creates _two_ levels of build dir
-      // (x86/Release)
-      "../../models/sponza2.obj"
-#else
-      // on linux, common practice is to have ONE level of build dir
-      // (say, <project>/build/)...
-      "../models/sponza2.obj"
-#endif
-          , All_Lights
-                             ); 
+      Model *model = loadOBJ("../../models/sponza2.obj", All_Lights); 
       Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
                                       /* at */model->bounds.center()-vec3f(0,400,0),
                                       /* up */vec3f(0.f,1.f,0.f) };
@@ -242,7 +225,7 @@ namespace osc {
 
       SampleWindow *window = new SampleWindow("BDPT",
                                               model,camera, All_Lights, worldScale);
-      //window->enableFlyMode();
+      window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;
       std::cout << "Press 'X' to enable/disable denoising" << std::endl;
@@ -254,7 +237,6 @@ namespace osc {
     } catch (std::runtime_error& e) {
       std::cout << GDT_TERMINAL_RED << "FATAL ERROR: " << e.what()
                 << GDT_TERMINAL_DEFAULT << std::endl;
-	  std::cout << "Did you forget to copy sponza.obj and sponza.mtl into your optix7course/models directory?" << std::endl;
 	  exit(1);
     }
     return 0;

@@ -17,6 +17,7 @@
 #include <optix_device.h>
 #include <cuda_runtime.h>
 #include <vector>
+#include "config.h"
 #include "LaunchParams.h"
 #include "tool_function.h"
 #include "BDPT.h"
@@ -45,6 +46,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         int& dir_hit = *getPRD<int>();
+
         if (dir_hit == sbtData.ID) {
             dir_hit = -1;
         }
@@ -55,15 +57,28 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 8;
+        const int Maxdepth = 7;
         if (prd.depth >= Maxdepth) {
-            prd.pixelColor = 0.0f;
+            prd.pixelColor = vec3f(0.0f);
             return;
         }
         if (sbtData.emissive_) {
-            prd.pixelColor = sbtData.emission*prd.throughout;
-            return;
-        }
+            {
+                prd.MeshId = sbtData.ID;
+                prd.PrimId = optixGetPrimitiveIndex();
+                switch (MY_MODE) {
+                case MY_MIS:
+                case MY_BRDF:
+                    prd.pixelColor = sbtData.emission * prd.throughout;
+                    break;
+                case MY_NEE:
+                    prd.pixelColor = vec3f(0);
+                }
+                
+                return;
+            }
+        }            
+        
         // ------------------------------------------------------------------
         // gather some basic hit information
         // ------------------------------------------------------------------
@@ -139,7 +154,7 @@ namespace osc
         //Begin of the true brdf
         // ------------------------------------------------------------------
 
-        PRD newprd;//新光线
+        PRD newprd; //新光线
         uint32_t u0, u1;
         
         vec3f mont_dir;//光方向
@@ -153,7 +168,7 @@ namespace osc
         weight *= num;
         LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
         LightSample Light_point;
-        Lp->sample(Light_point, prd);
+        Lp->sample(Light_point, prd,int(Lp->num*prd.random()));
 
         /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
         int dir_hit = Lp->id;
@@ -173,14 +188,23 @@ namespace osc
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
 
-        if ( dir_hit==-1) {
+        if (dir_hit == -1) {
             float dis = length(Light_point.position - surfPos);
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
             float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
-            pixelColor+= Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+            switch (MY_MODE)
+            {
+            case MY_BRDF:
+                break;
+            case MY_NEE:
+                pixelColor += Dir_color_contri / (True_pdf);
+                break;
+            case MY_MIS:
+                pixelColor += Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+                break;
+            }
         }
-        
             
         //间接光
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
@@ -203,9 +227,30 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Light_point.Pdf_Light(surfPos, mont_dir));
-        //pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir) ;
 
+        switch (MY_MODE) {
+        case MY_BRDF:
+        case MY_NEE:
+            pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
+            break;
+        case MY_MIS:
+            float light_pdf = 0;
+            for (int i = 0; i < num; i++)
+            {
+                if (optixLaunchParams.All_Lights[i].id == newprd.MeshId)
+                {
+                    LightParams* hit_light = &optixLaunchParams.All_Lights[i];
+                    LightSample hit_point;
+                    hit_light->sample(hit_point, newprd, newprd.PrimId);
+                    light_pdf += hit_point.Pdf_Light(surfPos, mont_dir);
+                    break;
+                }
+                    
+            }
+            pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) +light_pdf*num);
+            break;
+        }
+        
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = pixelColor;
@@ -244,7 +289,6 @@ namespace osc
     extern "C" __global__ void __raygen__renderFrame()
     {
         const float color_max_avilable = 1.f;
-        // compute a test pattern based on pixel ID
         const int ix = optixGetLaunchIndex().x;
         const int iy = optixGetLaunchIndex().y;
         const auto &camera = optixLaunchParams.camera;
@@ -271,15 +315,7 @@ namespace osc
             // rendreing is slightly larger than [0,1]^2
             vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
                 / vec2f(optixLaunchParams.frame.size));
-             //screen
-             //  = screen
-             //  * vec2f(optixLaunchParams.frame.denoisedSize)
-             //  * vec2f(optixLaunchParams.frame.size)
-             //  - 0.5f*(vec2f(optixLaunchParams.frame.size)
-             //          -
-             //          vec2f(optixLaunchParams.frame.denoisedSize)
-             //          );
-
+ 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
             
@@ -300,11 +336,11 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            //if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
+            if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
                 pixelColor += prd.pixelColor;
                 pixelNormal += prd.pixelNormal;
                 pixelAlbedo += prd.pixelAlbedo;
-            //}
+            }
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);

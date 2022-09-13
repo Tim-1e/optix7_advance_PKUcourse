@@ -71,13 +71,11 @@ namespace osc {
 			num = num_;
 		}
 
-		inline __both__ void sample(LightSample& sample, PRD& prd) {
+		inline __both__ void sample(LightSample& sample, PRD& prd, int chose) {
 			// Add this prefix to try to fit in cuda
 			const float r1 = prd.random();
 			const float r2 = prd.random();
 			vec3f A, B, C, uu, vv;
-			int chose;
-			chose = int(prd.random() * num);
 			A = vertex[index[chose].x];
 			B = vertex[index[chose].y];
 			C = vertex[index[chose].z];
@@ -89,7 +87,6 @@ namespace osc {
 			sample.normal = normalize(cross(uu, vv));
 			sample.emission = emission;
 			sample.pdf = 1.0 / sample.pdf_area;
-			sample.origin = A;
 			sample.u = uu;
 			sample.v = vv;
 			sample.lightType = lightType;

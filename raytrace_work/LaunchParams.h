@@ -14,7 +14,6 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 #pragma once
-#include <vector>
 #include "gdt/math/vec.h"
 #include "optix7.h"
 #include "LightParams.h"
@@ -22,7 +21,6 @@
 namespace osc {
   using namespace gdt;
 
-  // for this simple example, we have a single ray type
   enum { RADIANCE_RAY_TYPE=0, SHADOW_RAY_TYPE, RAY_TYPE_COUNT };
   struct TriangleMeshSBTData {
       vec3f  color;
