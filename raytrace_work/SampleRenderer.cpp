@@ -1,10 +1,12 @@
 #include "SampleRenderer.h"
+//#include "BDPT.h"
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
 namespace osc {
 
   extern "C" char embedded_ptx_code[];
+    
 
   /*! SBT record for a raygen program */
   struct __align__( OPTIX_SBT_RECORD_ALIGNMENT ) RaygenRecord
@@ -77,7 +79,6 @@ namespace osc {
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
       const int numMeshes = (int)model->meshes.size();
-      std::cout << vertexBuffer.size() << std::endl;
       for (int meshID = 0; meshID < numMeshes; meshID++) {
           TriangleMesh& mesh = *model->meshes[meshID];
           if (!mesh.emissive_) continue;
@@ -85,7 +86,7 @@ namespace osc {
           triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
           lights.push_back(triangle_light);
       }
-      std::cout << lights.size()<<std::endl;
+      //std::cout << lights.size()<<std::endl;
       All_LightBuffer.alloc_and_upload(lights);
       launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
       launchParams.Lights_num = lights.size();
@@ -94,7 +95,7 @@ namespace osc {
   void SampleRenderer::createTextures()
   {
     int numTextures = (int)model->textures.size();
-    std::cout << "we get texture size as"<< numTextures << std::endl;
+    //std::cout << "we get texture size as"<< numTextures << std::endl;
     textureArrays.resize(numTextures);
     textureObjects.resize(numTextures);
     
@@ -833,13 +834,19 @@ namespace osc {
     fbNormal.resize(newSize.x*newSize.y*sizeof(float4));
     fbAlbedo.resize(newSize.x*newSize.y*sizeof(float4));
     finalColorBuffer.resize(newSize.x*newSize.y*sizeof(uint32_t));
-    
+    //fbeyePath.resize(newSize.x * newSize.y * sizeof(BDPTVertex)* Maxdepth);
+    //fblightPath.resize(newSize.x * newSize.y * sizeof(BDPTVertex) * Maxdepth);
+    //fbconnectPath.resize(newSize.x * newSize.y * sizeof(BDPTVertex) * Maxdepth*2);
+
     // update the launch parameters that we'll pass to the optix
     // launch:
     launchParams.frame.size          = newSize;
     launchParams.frame.colorBuffer   = (float4*)fbColor.d_pointer();
     launchParams.frame.normalBuffer  = (float4*)fbNormal.d_pointer();
     launchParams.frame.albedoBuffer  = (float4*)fbAlbedo.d_pointer();
+    //launchParams.eyePath = (BDPTVertex*)fbeyePath.d_pointer();
+    //launchParams.lightPath= (BDPTVertex*)fblightPath.d_pointer();
+    //launchParams.connectPath = (BDPTVertex*)fbconnectPath.d_pointer();
 
     // and re-set the camera, since aspect may have changed
     setCamera(lastSetCamera);

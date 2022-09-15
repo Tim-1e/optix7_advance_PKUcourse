@@ -17,7 +17,7 @@
 #include <optix_device.h>
 #include <cuda_runtime.h>
 #include <vector>
-#include "tool_function.h"
+#include "BDPT_function.h"
 
 using namespace osc;
 
@@ -28,6 +28,9 @@ namespace osc
         optixLaunch (this gets filled in from the buffer we pass to
         optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
+
+    #define Maxdepth 30
+    #define M_PIf 3.14159265359
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
     //
@@ -42,9 +45,9 @@ namespace osc
     {
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
-        int& dir_hit = *getPRD<int>();
-        if (dir_hit == sbtData.ID) {
-            dir_hit = -1;
+        vec2i& dir_hit = *getPRD<vec2i>();
+        if (dir_hit.x == sbtData.ID ||dir_hit.y== optixGetPrimitiveIndex()) {
+            dir_hit.x = -1;
         }
     }
 
@@ -53,13 +56,10 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 7;
         if (prd.depth >= Maxdepth) {
-            prd.pixelColor = 0.0f;
             return;
         }
         if (sbtData.emissive_) {
-            prd.pixelColor = sbtData.emission*prd.throughout;
             return;
         }
         // ------------------------------------------------------------------
@@ -115,10 +115,9 @@ namespace osc
             specColor = (vec3f)fromTexture;
         }
 
-        const float alpha = sbtData.alpha_;
-        const float d = sbtData.d;
+        //const float alpha = sbtData.alpha_;
+        //const float d = sbtData.d;
 
-        vec3f pixelColor = 0.f;
 
         // ------------------------------------------------------------------
         // compute shadow
@@ -127,74 +126,29 @@ namespace osc
 
         float diffuse_max = max(max(diffuseColor[0], diffuseColor[1]), diffuseColor[2]);
         
-        const float RR =clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
+        const float RR = 0.8f;//clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
         if (prd.random() > RR) {
-            prd.pixelColor = 0.0f;
             return;
         }
 
-        // ------------------------------------------------------------------
-        //Begin of the true brdf
-        // ------------------------------------------------------------------
 
         PRD newprd;//新光线
         uint32_t u0, u1;
-        
         vec3f mont_dir;//光方向
-        vec3f weight = 1.0f;//权重
-
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
-        //直接光
-        int num = optixLaunchParams.Lights_num;
-        weight *= num;
-        LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
-        LightSample Light_point;
-        Lp->sample(Light_point, prd.random);
 
-        /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
-        int dir_hit = Lp->id;
-
-        //printf("dire light trace in %d\n", sbtData.ID);
-        packPointer(&dir_hit, u0, u1);
-        vec3f lightDir = normalize(Light_point.position - surfPos);
-        optixTrace(optixLaunchParams.traversable,
-            surfPos + 1e-3f * Ng,
-            lightDir,
-            0.f,    // tmin
-            1e20f,  // tmax
-            0.0f,   // rayTime
-            OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT, 
-            SHADOW_RAY_TYPE,            // SBT offset
-            RAY_TYPE_COUNT,               // SBT stride
-            SHADOW_RAY_TYPE,            // missSBTIndex 
-            u0, u1);
-        //printf("dire light trace out %d\n", sbtData.ID);
-        //printf("dire light calculate in %d\n", sbtData.ID);
-        if ( dir_hit==-1) {
-            float dis = length(Light_point.position - surfPos);
-            weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
-            vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
-            float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
-            float Pdf_All = True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir);
-            //float Pdf_All = True_pdf;
-            Pdf_All = max(1e-5f, Pdf_All);
-            pixelColor+= Dir_color_contri / Pdf_All;
-        }
-        //printf("dire light calculate out %d\n", sbtData.ID);
-            
-        //间接光
+        //Pass 将新点加入path
+        //prd.path->vertexs[prd.depth].init(surfPos, Ns, (TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
+        //prd.path->length= prd.depth + 1;
+        //取出路径顶点
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
-
-        weight = Eval(sbtData, Ns, rayDir, mont_dir,mext);
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
-        newprd.throughout = min(prd.throughout*weight/RR,vec3f(1e3f));
-        newprd.sourcePos = surfPos;
-        //printf("bias light trace out %d\n", sbtData.ID);
+        //newprd.path = prd.path;
+
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             mont_dir,
@@ -207,19 +161,8 @@ namespace osc
             RAY_TYPE_COUNT,               // SBT stride
             RADIANCE_RAY_TYPE,            // missSBTIndex 
             u0, u1);
-        //printf("bias light trace out %d\n", sbtData.ID);
-        //printf("bias light calculate out %d\n", sbtData.ID);
-        float Pdf_All = Pdf_brdf(sbtData, Ns, rayDir, mont_dir) + Light_point.Pdf_Light(surfPos, mont_dir);
-        //float Pdf_All = Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
-        Pdf_All = max(1e-5f, Pdf_All);
 
-        pixelColor += newprd.pixelColor / Pdf_All;
-        //printf("bias light calculate out %d\n", sbtData.ID);
-        //pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir) ;
-
-        prd.pixelNormal = Ns;
-        prd.pixelAlbedo = diffuseColor;
-        prd.pixelColor = max(pixelColor,vec3f(0.f));
+        return;
     }
 
     extern "C" __global__ void __anyhit__radiance()
@@ -240,13 +183,10 @@ namespace osc
 
     extern "C" __global__ void __miss__radiance()
     {
-        PRD &prd = *getPRD<PRD>();
-        prd.pixelColor = 0.f;
     }
 
     extern "C" __global__ void __miss__shadow()
     {
-
     }
 
     //------------------------------------------------------------------------------
@@ -254,7 +194,7 @@ namespace osc
     //------------------------------------------------------------------------------
     extern "C" __global__ void __raygen__renderFrame()
     {
-        const float color_max_avilable = 1.f;
+        //const float color_max_avilable = 1.f;
         // compute a test pattern based on pixel ID
         const int ix = optixGetLaunchIndex().x;
         const int iy = optixGetLaunchIndex().y;
@@ -270,35 +210,22 @@ namespace osc
         int numPixelSamples = optixLaunchParams.numPixelSamples;
 
         vec3f pixelColor = 0.f;
-        vec3f pixelNormal = 0.f;
-        vec3f pixelAlbedo = 0.f;
+        //vec3f pixelNormal = 0.f;
+        //vec3f pixelAlbedo = 0.f;
+
         for (int sampleID = 0; sampleID < numPixelSamples; sampleID++)
         {
-            // normalized screen plane position, in [0,1]^2
-
-            // iw: note for denoising that's not actually correct - if we
-            // assume that the camera should only(!) cover the denoised
-            // screen then the actual screen plane we shuld be using during
-            // rendreing is slightly larger than [0,1]^2
             vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
                 / vec2f(optixLaunchParams.frame.size));
-             //screen
-             //  = screen
-             //  * vec2f(optixLaunchParams.frame.denoisedSize)
-             //  * vec2f(optixLaunchParams.frame.size)
-             //  - 0.5f*(vec2f(optixLaunchParams.frame.size)
-             //          -
-             //          vec2f(optixLaunchParams.frame.denoisedSize)
-             //          );
+
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
-            
-            prd.pixelColor = vec3f(1.f);
-            prd.depth = 0;
-            prd.throughout = 1.f;
-            prd.sourcePos = camera.position;
+            BDPTPath eye_path,light_path,connect_path;
 
+            //Begin the eye path build
+            prd.depth = 0;
+            //prd.path=&eye_path;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -311,17 +238,67 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            //if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
-                pixelColor += prd.pixelColor;
-                pixelNormal += prd.pixelNormal;
-                pixelAlbedo += prd.pixelAlbedo;
+
+            ////Begin the light path build
+            //int num = optixLaunchParams.Lights_num;
+            //LightParams* Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
+            //LightSample Light_point;
+            //Lp->sample(Light_point, prd.random);
+
+            //light_path.vertexs[0].pdf = 1 / (2 * M_PIf);
+            //light_path.vertexs[0].init(Light_point.position, Light_point.normal,Light_point.meshID);
+            //prd.depth = 1;
+            //prd.path = &light_path;
+            //optixTrace(optixLaunchParams.traversable,
+            //    camera.position,
+            //    rayDir,
+            //    0.f,    // tmin
+            //    1e20f,  // tmax
+            //    0.0f,   // rayTime
+            //    OptixVisibilityMask(255),
+            //    OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
+            //    RADIANCE_RAY_TYPE,            // SBT offset
+            //    RAY_TYPE_COUNT,               // SBT stride
+            //    RADIANCE_RAY_TYPE,            // missSBTIndex 
+            //    u0, u1);
+
+            ////printf("we get there with %d and %d\n", eye_path.length, light_path.length);
+            //for (int eye_length = 1; eye_length < eye_path.length; eye_length++)
+            //{
+            //    for (int light_length = 1; light_length < light_path.length; light_length++)
+            //    {
+            //        //可见性判断
+            //        vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
+            //        vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
+            //        vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
+            //        vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
+            //        vec2i dir_hit = vec2i(eye_path.vertexs[eye_length - 1].mat->ID, eye_path.vertexs[eye_length - 1].MeshID);
+            //        packPointer(&dir_hit, u0, u1);
+            //        optixTrace(optixLaunchParams.traversable,
+            //            eyeLastPoint + 1e-3f * Ng,
+            //            lightDir,
+            //            0.f,    // tmin
+            //            1e20f,  // tmax
+            //            0.0f,   // rayTime
+            //            OptixVisibilityMask(255),
+            //            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+            //            SHADOW_RAY_TYPE,            // SBT offset
+            //            RAY_TYPE_COUNT,               // SBT stride
+            //            SHADOW_RAY_TYPE,            // missSBTIndex 
+            //            u0, u1);
+            //        //printf("we try?\n");
+            //        if (dir_hit.x != -1) continue;
+            //        //printf("successful meet,with %d light %d eye\n", light_length, eye_length);
+            //        Connect_two_path(eye_path,light_path,connect_path,eye_length,light_length);
+            //        pixelColor+= evalPath(connect_path);
+            //    }
             //}
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
-        vec4f albedo(pixelAlbedo / numPixelSamples, 1.f);
-        vec4f normal(pixelNormal / numPixelSamples, 1.f);
-
+        //vec4f albedo(pixelAlbedo / numPixelSamples, 1.f);
+        //vec4f normal(pixelNormal / numPixelSamples, 1.f);
+        
         // and write/accumulate to frame buffer ...
         const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
         if (optixLaunchParams.frame.frameID > 0)
@@ -330,8 +307,8 @@ namespace osc
             rgba /= (optixLaunchParams.frame.frameID + 1.f);
         }
         optixLaunchParams.frame.colorBuffer[fbIndex] = (float4)rgba;
-        optixLaunchParams.frame.albedoBuffer[fbIndex] = (float4)albedo;
-        optixLaunchParams.frame.normalBuffer[fbIndex] = (float4)normal;
+        //optixLaunchParams.frame.albedoBuffer[fbIndex] = (float4)albedo;
+        //optixLaunchParams.frame.normalBuffer[fbIndex] = (float4)normal;
     }
 
 } // ::osc
