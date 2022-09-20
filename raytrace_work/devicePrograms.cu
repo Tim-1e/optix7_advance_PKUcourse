@@ -229,7 +229,7 @@ namespace osc
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
-            BDPTPath eye_path,light_path,connect_path;
+            BDPTPath eye_path,light_path;
             //std::printf("pdf %f\n", eye_path.vertexs[0].pdf);
             //Begin the eye path build
 
@@ -283,8 +283,8 @@ namespace osc
                 u0, u1);
                 
             //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
-            std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
-            for (int eye_length = 1; eye_length <= eye_path.length; eye_length++)
+            //std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
+            for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
                 for (int light_length = 1; light_length <= light_path.length; light_length++)
                 {
@@ -314,9 +314,10 @@ namespace osc
                     if (dir_hit.x == -1)
                     {
                         //std::printf("color %f\n", pixelColor.r);
+                        BDPTPath connect_path;
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                         pixelColor += evalPath(connect_path);
-                        std::printf("color %f\n", evalPath(connect_path).r);
+                        //std::printf("color %f\n", evalPath(connect_path).r);
                         
                     }
                 }

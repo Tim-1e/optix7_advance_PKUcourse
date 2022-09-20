@@ -18,6 +18,7 @@ namespace osc {
         {
             pdf += pdfCompute(path, i);//i表示最后一个视路径长度
         }
+        //std::printf("contri:%f,length:%d,pdf:%f\n", contri.r,path.length, pdf);
         vec3f ans = contri / pdf;
         if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
         {
@@ -40,13 +41,13 @@ namespace osc {
         }
         vec3f Le = light.mat->emission * lAng;
         throughput *= Le;
-        for (int i = 1; i < path.length; i++)
-        {
-            const BDPTVertex& midPoint = path.vertexs[i];
-            const BDPTVertex& lastPoint = path.vertexs[i - 1];
-            vec3f line = midPoint.position - lastPoint.position;
-            throughput /= dot(line, line);
-        }
+        //for (int i = 1; i < path.length; i++)
+        //{
+        //    const BDPTVertex& midPoint = path.vertexs[i];
+        //    const BDPTVertex& lastPoint = path.vertexs[i - 1];
+        //    vec3f line = midPoint.position - lastPoint.position;
+        //    throughput /= dot(line, line);
+        //}
         for (int i = 1; i < path.length - 1; i++)
         {
             const BDPTVertex& midPoint = path.vertexs[i];
@@ -94,8 +95,18 @@ namespace osc {
                 const BDPTVertex& lastPoint = path.vertexs[path.length - i];
                 vec3f line = midPoint.position - lastPoint.position;
                 vec3f lineDirection = normalize(line);
-                pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+                //pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+                pdf *= 1.0 * abs(dot(midPoint.normal, lineDirection));
             }
+
+            //for (int i = eyePathLength; i < eyePathLength + 1; i++)
+            //{
+            //    const BDPTVertex& midPoint = path.vertexs[i - 1];
+            //    const BDPTVertex& lastPoint = path.vertexs[i];
+            //    vec3f line = midPoint.position - lastPoint.position;
+            //    vec3f lineDirection = normalize(line);
+            //    pdf *= dot(line, line);                
+            //}
 
             for (int i = 1; i < lightPathLength - 1; i++)
             {
@@ -115,7 +126,9 @@ namespace osc {
             const BDPTVertex& lastPoint = path.vertexs[i - 1];
             vec3f line = midPoint.position - lastPoint.position;
             vec3f lineDirection = normalize(line);
-            pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            //pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            pdf *= 1.0f * abs(dot(midPoint.normal, lineDirection));
+
         }
 
         for (int i = 1; i < eyePathLength - 1; i++)
