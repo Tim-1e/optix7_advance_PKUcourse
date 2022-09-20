@@ -28,7 +28,7 @@ namespace osc {
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
-      startTime = clock();
+      myTime.startTime = clock();
     }
     
     virtual void render() override
@@ -98,7 +98,7 @@ namespace osc {
     {
         std::reverse(pixels.begin(), pixels.end());
         int currentTime = clock();
-        int deltaTime = currentTime - startTime;
+        int deltaTime = currentTime - myTime.startTime;
         for (int i = 0; i < myTime.len; ++i) {
             if (!myTime.timeFlag[i] && deltaTime > myTime.timeStamp[i]) {
                 myTime.timeFlag[i] = true;
@@ -196,13 +196,14 @@ namespace osc {
     GLuint                fbTexture {0};
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
-    int startTime;
     struct timeStruct
     {
-        const int len = 7;
-        bool timeFlag[7] = { 0 };
-        std::string timeStampStr[7] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s"};
-        int timeStamp[7] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000 };
+#define TIME_LEN 7
+        int startTime;
+        const int len = TIME_LEN;
+        bool timeFlag[TIME_LEN] = { 0 };
+        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s"};
+        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000 };
     } myTime;
   };
 
@@ -232,6 +233,8 @@ namespace osc {
       std::cout << "Press ',' to reduce the number of paths/pixel" << std::endl;
       std::cout << "Press '.' to increase the number of paths/pixel" << std::endl;
       std::cout << "Press 'Q' to get your camera position" << std::endl;
+
+      // begin the rendering
       window->run();
       
     } catch (std::runtime_error& e) {

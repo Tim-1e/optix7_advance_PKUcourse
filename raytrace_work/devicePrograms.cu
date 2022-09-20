@@ -44,10 +44,10 @@ namespace osc
     {
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
-        int& dir_hit = *getPRD<int>();
+        int& light_hit = *getPRD<int>();
 
-        if (dir_hit == sbtData.ID) {
-            dir_hit = -1;
+        if (light_hit == sbtData.ID) {
+            light_hit = -1;
         }
     }
 
@@ -56,8 +56,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
-        const int Maxdepth = 7;
-        if (prd.depth >= Maxdepth) {
+        if (prd.depth >= MAX_DEPTH) {
             prd.pixelColor = vec3f(0.0f);
             return;
         }
@@ -73,7 +72,6 @@ namespace osc
                 case MY_NEE:
                     prd.pixelColor = vec3f(0);
                 }
-                
                 return;
             }
         }            
@@ -136,9 +134,6 @@ namespace osc
 
         vec3f pixelColor = 0.f;
 
-        // ------------------------------------------------------------------
-        // compute shadow
-        // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
         float diffuse_max = max(max(diffuseColor[0], diffuseColor[1]), diffuseColor[2]);
@@ -156,26 +151,23 @@ namespace osc
         PRD newprd; //新光线
         uint32_t u0, u1;
         
-        vec3f mont_dir;//光方向
+        vec3f new_dir;//光方向
         vec3f weight = 1.0f;//权重
 
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
         //直接光
-        int num = optixLaunchParams.Lights_num;
-        weight *= num;
-        LightParams *Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
-        LightSample Light_point;
+        int lightNum = optixLaunchParams.Lights_num;
+        LightParams *LP = &optixLaunchParams.All_Lights[int(lightNum * prd.random())];
+        LightSample LS;
 
-        Lp->sample(Light_point, prd.random,int(Lp->num*prd.random()));
+        LP->sample(LS, prd.random,int(LP->num*prd.random()));
 
-        /*printf("%f %f %f\n", Lp->normal.x, Lp->normal.y, Lp->normal.z);*/
-        int dir_hit = Lp->id;
+        int light_hit = LP->id;
 
-        //printf("dire light trace in %d\n", sbtData.ID);
-        packPointer(&dir_hit, u0, u1);
-        vec3f lightDir = normalize(Light_point.position - surfPos);
+        packPointer(&light_hit, u0, u1);
+        vec3f lightDir = normalize(LS.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             lightDir,
@@ -189,38 +181,36 @@ namespace osc
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
 
-        if (dir_hit == -1) {
-
-            float dis = length(Light_point.position - surfPos);
+        if (light_hit == -1) {
+            float dis = length(LS.position - surfPos);
+            weight *= lightNum;
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
-            vec3f Dir_color_contri = prd.throughout * weight  * Light_point.emission / RR;
-            float True_pdf = Light_point.pdf * dis * dis / dot(Light_point.normal, -lightDir);
+            vec3f Dir_color_contri = prd.throughout * weight  * LS.emission / RR;
+            float Pdf_nee = LS.pdf * dis * dis / dot(LS.normal, -lightDir);
             switch (MY_MODE)
             {
             case MY_BRDF:
                 break;
             case MY_NEE:
-                pixelColor += Dir_color_contri / (True_pdf);
+                pixelColor += Dir_color_contri / (Pdf_nee);
                 break;
             case MY_MIS:
-                pixelColor += Dir_color_contri / (True_pdf + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+                pixelColor += Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
                 break;
             }
         }
             
         //间接光
-        mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
-
-        weight = Eval(sbtData, Ns, rayDir, mont_dir,mext);
+        new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
+        weight = Eval(sbtData, Ns, rayDir, new_dir,mext);
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
         newprd.throughout = min(prd.throughout*weight/RR,vec3f(1e3f));
         newprd.sourcePos = surfPos;
-        //printf("bias light trace out %d\n", sbtData.ID);
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
-            mont_dir,
+            new_dir,
             0.f,    // tmin
             1e20f,  // tmax
             0.0f,   // rayTime
@@ -234,23 +224,23 @@ namespace osc
         switch (MY_MODE) {
         case MY_BRDF:
         case MY_NEE:
-            pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
+            pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, new_dir);
             break;
         case MY_MIS:
             float light_pdf = 0;
-            for (int i = 0; i < num; i++)
+            for (int i = 0; i < lightNum; i++)
             {
                 if (optixLaunchParams.All_Lights[i].id == newprd.MeshId)
                 {
                     LightParams* hit_light = &optixLaunchParams.All_Lights[i];
                     LightSample hit_point;
                     hit_light->sample(hit_point, newprd.random, newprd.PrimId);
-                    light_pdf += hit_point.Pdf_Light(surfPos, mont_dir);
+                    light_pdf += hit_point.Pdf_Light(surfPos, new_dir);
                     break;
                 }
                     
             }
-            pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, mont_dir) +light_pdf*num);
+            pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, new_dir) +light_pdf* lightNum);
             break;
         }
         

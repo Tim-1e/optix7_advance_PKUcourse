@@ -62,7 +62,6 @@ namespace osc {
 
     createTextures();
 
-    
     std::cout << "#osc: building SBT ..." << std::endl;
     buildSBT();
 

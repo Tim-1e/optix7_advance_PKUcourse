@@ -169,7 +169,7 @@
     }
 
     static __forceinline__  __device__
-        vec3f Sample_adjust(const TriangleMeshSBTData& mat, const vec3f& normal, const vec3f& ray_in, PRD& prd)
+        vec3f SampleNewRay(const TriangleMeshSBTData& mat, const vec3f& normal, const vec3f& ray_in, PRD& prd)
     {
         vec3f N = normal;
         vec3f V = -ray_in;
@@ -181,7 +181,6 @@
         float r1 = prd.random();
         float r2 = prd.random();
 
-
         if (probability < diffuseRatio) // sample diffuse
         {
             dir = AxisAngle(N, r1, r2 * 2 * M_PI);
@@ -189,15 +188,10 @@
         else
         {
             float a = max(0.001f, mat.roughness);
-
             float phi = r1 * 2.0f * M_PI;
-
             float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-
             vec3f half = AxisAngle(N,  cosTheta * cosTheta, phi);
-
             dir = 2.0f * dot(V, half) * half - V; //reflection vector
-
         }
         return dir;
     }

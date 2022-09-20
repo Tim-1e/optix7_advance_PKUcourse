@@ -72,7 +72,6 @@ namespace osc {
 		}
 
 		inline __both__ void sample(LightSample& sample, Random& rdm, int chose) {
-			// Add this prefix to try to fit in cuda
 			const float r1 = rdm();
 			const float r2 = rdm();
 			vec3f A, B, C, uu, vv;
