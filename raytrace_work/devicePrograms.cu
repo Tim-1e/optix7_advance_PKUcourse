@@ -58,24 +58,40 @@ namespace osc
         PRD& prd = *getPRD<PRD>();
         if (prd.depth >= MAX_DEPTH) {
             prd.pixelColor = vec3f(0.0f);
+            prd.end = 1;
             return;
         }
         if (sbtData.emissive_) {
-            {
-                prd.MeshId = sbtData.ID;
-                prd.PrimId = optixGetPrimitiveIndex();
+                int MeshId = sbtData.ID;
+                int PrimId = optixGetPrimitiveIndex();
+                int num = optixLaunchParams.Lights_num;
+                vec3f light_pdf;
                 switch (MY_MODE) {
                 case MY_MIS:
+                    for (int i = 0; i < num; i++)
+                    {
+                        if (optixLaunchParams.All_Lights[i].id == MeshId)
+                        {
+                            LightParams* hit_light = &optixLaunchParams.All_Lights[i];
+                            LightSample hit_point;
+                            hit_light->sample(hit_point, prd.random, PrimId);
+                            light_pdf = hit_point.Pdf_Light(prd.sourcePos, prd.nextPosition);
+                            break;
+                        }
+                    }
+                    prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ light_pdf * num);
+                    break;
                 case MY_BRDF:
                     prd.pixelColor = sbtData.emission * prd.throughout;
                     break;
                 case MY_NEE:
                     prd.pixelColor = vec3f(0);
                 }
+                prd.end = 1;
                 return;
-            }
         }            
-        
+        //prd.throughout /= prd.weight;//非光源，并入即可
+
         // ------------------------------------------------------------------
         // gather some basic hit information
         // ------------------------------------------------------------------
@@ -132,23 +148,14 @@ namespace osc
         const float alpha = sbtData.alpha_;
         const float d = sbtData.d;
 
-        vec3f pixelColor = 0.f;
-
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
         float diffuse_max = max(max(diffuseColor[0], diffuseColor[1]), diffuseColor[2]);
-        
-        const float RR =clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
-        if (prd.random() > RR) {
-            prd.pixelColor = 0.0f;
-            return;
-        }
-
+     
         // ------------------------------------------------------------------
         //Begin of the true brdf
         // ------------------------------------------------------------------
 
-        PRD newprd; //新光线
         uint32_t u0, u1;
         
         vec3f new_dir;//光方向
@@ -185,68 +192,41 @@ namespace osc
             float dis = length(LS.position - surfPos);
             weight *= lightNum;
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
-            vec3f Dir_color_contri = prd.throughout * weight  * LS.emission / RR;
+            vec3f Dir_color_contri = prd.throughout * weight  * LS.emission ;
             float Pdf_nee = LS.pdf * dis * dis / dot(LS.normal, -lightDir);
             switch (MY_MODE)
             {
             case MY_BRDF:
                 break;
             case MY_NEE:
-                pixelColor += Dir_color_contri / (Pdf_nee);
+                prd.pixelColor = Dir_color_contri / (Pdf_nee);
                 break;
             case MY_MIS:
-                pixelColor += Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+                prd.pixelColor = Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
                 break;
             }
         }
             
-        //间接光
-        new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
-        weight = Eval(sbtData, Ns, rayDir, new_dir,mext);
-        packPointer(&newprd, u0, u1);
-        newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
-        newprd.depth = prd.depth + 1;
-        newprd.throughout = min(prd.throughout*weight/RR,vec3f(1e3f));
-        newprd.sourcePos = surfPos;
-        optixTrace(optixLaunchParams.traversable,
-            surfPos + 1e-3f * Ng,
-            new_dir,
-            0.f,    // tmin
-            1e20f,  // tmax
-            0.0f,   // rayTime
-            OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-            RADIANCE_RAY_TYPE,            // SBT offset`
-            RAY_TYPE_COUNT,               // SBT stride
-            RADIANCE_RAY_TYPE,            // missSBTIndex 
-            u0, u1);
+        const float RR = clamp(diffuse_max, 0.3f, 0.9f);//俄罗斯轮盘赌
 
-        switch (MY_MODE) {
-        case MY_BRDF:
-        case MY_NEE:
-            pixelColor += newprd.pixelColor / Pdf_brdf(sbtData, Ns, rayDir, new_dir);
-            break;
-        case MY_MIS:
-            float light_pdf = 0;
-            for (int i = 0; i < lightNum; i++)
-            {
-                if (optixLaunchParams.All_Lights[i].id == newprd.MeshId)
-                {
-                    LightParams* hit_light = &optixLaunchParams.All_Lights[i];
-                    LightSample hit_point;
-                    hit_light->sample(hit_point, newprd.random, newprd.PrimId);
-                    light_pdf += hit_point.Pdf_Light(surfPos, new_dir);
-                    break;
-                }
-                    
-            }
-            pixelColor += newprd.pixelColor / (Pdf_brdf(sbtData, Ns, rayDir, new_dir) +light_pdf* lightNum);
-            break;
-        }
-        
+        new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
+        weight = Eval(sbtData, Ns, rayDir, new_dir, mext);
+        prd.depth = prd.depth + 1;
+        prd.throughout = prd.throughout * weight / RR;
+        prd.sourcePos = surfPos;
+        prd.nextPosition = new_dir;
+
+
+        prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
+        prd.throughout = min(prd.throughout, vec3f(1e4f));
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
-        prd.pixelColor = max(pixelColor,vec3f(0.f));
+        prd.pixelColor = max(prd.pixelColor,vec3f(0.f));
+
+        if (prd.random() > RR) {
+            prd.end = 1;
+            return;
+        }
     }
 
     extern "C" __global__ void __anyhit__radiance()
@@ -269,6 +249,7 @@ namespace osc
     {
         PRD &prd = *getPRD<PRD>();
         prd.pixelColor = 0.f;
+        prd.end = 1;
     }
 
     extern "C" __global__ void __miss__shadow()
@@ -312,11 +293,13 @@ namespace osc
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
             
-            prd.pixelColor = vec3f(1.f);
+            prd.pixelColor = vec3f(0.f);
+            prd.pixelAlbedo = vec3f(0.f);
+            prd.pixelNormal = vec3f(0.f);
             prd.depth = 0;
             prd.throughout = 1.f;
             prd.sourcePos = camera.position;
-
+            prd.end = 0;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -329,11 +312,28 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            if (pixelColor[0] < color_max_avilable && pixelColor[1] < color_max_avilable && pixelColor[2] < color_max_avilable) {
-                pixelColor += prd.pixelColor;
-                pixelNormal += prd.pixelNormal;
-                pixelAlbedo += prd.pixelAlbedo;
+            pixelColor += prd.pixelColor;
+            pixelNormal += prd.pixelNormal;
+            pixelAlbedo += prd.pixelAlbedo;
+
+            while (!prd.end)
+            {
+                //间接光
+                optixTrace(optixLaunchParams.traversable,
+                    prd.sourcePos + 1e-3f * prd.pixelNormal,
+                    prd.nextPosition,
+                    0.f,    // tmin
+                    1e20f,  // tmax
+                    0.0f,   // rayTime
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                    RADIANCE_RAY_TYPE,            // SBT offset`
+                    RAY_TYPE_COUNT,               // SBT stride
+                    RADIANCE_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+                    pixelColor += max(prd.pixelColor, vec3f(0.f));
             }
+            //printf("End!!");
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
@@ -350,6 +350,7 @@ namespace osc
         optixLaunchParams.frame.colorBuffer[fbIndex] = (float4)rgba;
         optixLaunchParams.frame.albedoBuffer[fbIndex] = (float4)albedo;
         optixLaunchParams.frame.normalBuffer[fbIndex] = (float4)normal;
+        //printf("we got rgba as %f   %f    %f    %f\n", rgba.x, rgba.y, rgba.z, rgba.w);
     }
 
 } // ::osc
