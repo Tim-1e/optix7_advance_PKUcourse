@@ -56,6 +56,7 @@ namespace osc {
             vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
             throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
                 * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+            
         }
         return throughput;
     }

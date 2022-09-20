@@ -232,8 +232,12 @@ namespace osc
             BDPTPath eye_path,light_path,connect_path;
             //std::printf("pdf %f\n", eye_path.vertexs[0].pdf);
             //Begin the eye path build
-            prd.depth = 0;
+
+            eye_path.vertexs[0].init(camera.position);
+
+            prd.depth = 1;
             prd.path=&eye_path;
+
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -279,7 +283,7 @@ namespace osc
                 u0, u1);
                 
             //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
-            //std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
+            std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
             for (int eye_length = 1; eye_length <= eye_path.length; eye_length++)
             {
                 for (int light_length = 1; light_length <= light_path.length; light_length++)
@@ -312,6 +316,7 @@ namespace osc
                         //std::printf("color %f\n", pixelColor.r);
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                         pixelColor += evalPath(connect_path);
+                        std::printf("color %f\n", evalPath(connect_path).r);
                         
                     }
                 }
