@@ -82,7 +82,7 @@ namespace osc
                     prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ light_pdf * num);
                     break;
                 case MY_BRDF:
-                    prd.pixelColor = sbtData.emission * prd.throughout;
+                    prd.pixelColor = sbtData.emission * prd.throughout ;
                     break;
                 case MY_NEE:
                     prd.pixelColor = vec3f(0);
@@ -90,7 +90,7 @@ namespace osc
                 prd.end = 1;
                 return;
         }            
-        //prd.throughout /= prd.weight;//非光源，并入即可
+        prd.throughout /= prd.weight;//非光源，并入即可
 
         // ------------------------------------------------------------------
         // gather some basic hit information
@@ -218,7 +218,7 @@ namespace osc
 
 
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
-        prd.throughout = min(prd.throughout, vec3f(1e4f));
+        prd.throughout = min(prd.throughout, vec3f(1e3f));
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = max(prd.pixelColor,vec3f(0.f));
@@ -297,8 +297,9 @@ namespace osc
             prd.pixelAlbedo = vec3f(0.f);
             prd.pixelNormal = vec3f(0.f);
             prd.depth = 0;
-            prd.throughout = 1.f;
+            prd.throughout = vec3f(1.f);
             prd.sourcePos = camera.position;
+            prd.weight = vec3f(1.f);
             prd.end = 0;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
