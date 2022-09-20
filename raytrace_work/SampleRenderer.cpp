@@ -354,7 +354,7 @@ namespace osc {
     pipelineCompileOptions.exceptionFlags     = OPTIX_EXCEPTION_FLAG_NONE;
     pipelineCompileOptions.pipelineLaunchParamsVariableName = "optixLaunchParams";
       
-    pipelineLinkOptions.maxTraceDepth          = 2;
+    pipelineLinkOptions.maxTraceDepth          = 31;
       
     const std::string ptxCode = embedded_ptx_code;
       

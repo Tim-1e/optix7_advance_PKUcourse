@@ -29,7 +29,7 @@ namespace osc
         optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
 
-    #define Maxdepth 30
+    #define Maxdepth 10
     #define M_PIf 3.14159265359
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
@@ -46,7 +46,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         vec2i& dir_hit = *getPRD<vec2i>();
-        if (dir_hit.x == sbtData.ID ||dir_hit.y== optixGetPrimitiveIndex()) {
+        if (dir_hit.x == sbtData.ID ||dir_hit.y == optixGetPrimitiveIndex()) {
             dir_hit.x = -1;
         }
     }
@@ -140,15 +140,19 @@ namespace osc
         mext.specColor = specColor;//材质属性
 
         //Pass 将新点加入path
-        //prd.path->vertexs[prd.depth].init(surfPos, Ns, (TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
-        //prd.path->length= prd.depth + 1;
+
+        //std::printf("initing prd\n");
+        //std::printf("length:%d,depth:%d\n",prd.path->length,prd.depth);
+        prd.path->vertexs[prd.depth].init(surfPos, Ns, (TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
+        //std::printf("vertexs init finished\n");
+        prd.path->length = prd.depth + 1;
         //取出路径顶点
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
         packPointer(&newprd, u0, u1);
         newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
         newprd.depth = prd.depth + 1;
-        //newprd.path = prd.path;
-
+        newprd.path = prd.path;
+        
         optixTrace(optixLaunchParams.traversable,
             surfPos + 1e-3f * Ng,
             mont_dir,
@@ -194,6 +198,10 @@ namespace osc
     //------------------------------------------------------------------------------
     extern "C" __global__ void __raygen__renderFrame()
     {
+        //BDPTPath path;
+        //path.vertexs[0].init(vec3f(0));
+        //std::printf("%f\n", path.vertexs[0].pdf);
+        
         //const float color_max_avilable = 1.f;
         // compute a test pattern based on pixel ID
         const int ix = optixGetLaunchIndex().x;
@@ -222,10 +230,10 @@ namespace osc
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
             BDPTPath eye_path,light_path,connect_path;
-
+            //std::printf("pdf %f\n", eye_path.vertexs[0].pdf);
             //Begin the eye path build
             prd.depth = 0;
-            //prd.path=&eye_path;
+            prd.path=&eye_path;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -238,61 +246,77 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
+            
+            //Begin the light path build
+            int num = optixLaunchParams.Lights_num;
+            LightParams* Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
+            LightSample Light_point;
+            Lp->sample(Light_point, prd.random);
 
-            ////Begin the light path build
-            //int num = optixLaunchParams.Lights_num;
-            //LightParams* Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
-            //LightSample Light_point;
-            //Lp->sample(Light_point, prd.random);
+            light_path.length = 1;
+            light_path.vertexs[0].pdf = 1 / (2 * M_PIf);
+            TriangleMeshSBTData mat;
+            mat.ID = Light_point.id;
+            mat.emission = Lp->emission;
+            M_extansion ext;
+            light_path.vertexs[0].init(Light_point.position, Light_point.normal,&mat,ext,Light_point.meshID);
 
-            //light_path.vertexs[0].pdf = 1 / (2 * M_PIf);
-            //light_path.vertexs[0].init(Light_point.position, Light_point.normal,Light_point.meshID);
-            //prd.depth = 1;
-            //prd.path = &light_path;
-            //optixTrace(optixLaunchParams.traversable,
-            //    camera.position,
-            //    rayDir,
-            //    0.f,    // tmin
-            //    1e20f,  // tmax
-            //    0.0f,   // rayTime
-            //    OptixVisibilityMask(255),
-            //    OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
-            //    RADIANCE_RAY_TYPE,            // SBT offset
-            //    RAY_TYPE_COUNT,               // SBT stride
-            //    RADIANCE_RAY_TYPE,            // missSBTIndex 
-            //    u0, u1);
-
-            ////printf("we get there with %d and %d\n", eye_path.length, light_path.length);
-            //for (int eye_length = 1; eye_length < eye_path.length; eye_length++)
-            //{
-            //    for (int light_length = 1; light_length < light_path.length; light_length++)
-            //    {
-            //        //可见性判断
-            //        vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
-            //        vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
-            //        vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
-            //        vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
-            //        vec2i dir_hit = vec2i(eye_path.vertexs[eye_length - 1].mat->ID, eye_path.vertexs[eye_length - 1].MeshID);
-            //        packPointer(&dir_hit, u0, u1);
-            //        optixTrace(optixLaunchParams.traversable,
-            //            eyeLastPoint + 1e-3f * Ng,
-            //            lightDir,
-            //            0.f,    // tmin
-            //            1e20f,  // tmax
-            //            0.0f,   // rayTime
-            //            OptixVisibilityMask(255),
-            //            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-            //            SHADOW_RAY_TYPE,            // SBT offset
-            //            RAY_TYPE_COUNT,               // SBT stride
-            //            SHADOW_RAY_TYPE,            // missSBTIndex 
-            //            u0, u1);
-            //        //printf("we try?\n");
-            //        if (dir_hit.x != -1) continue;
-            //        //printf("successful meet,with %d light %d eye\n", light_length, eye_length);
-            //        Connect_two_path(eye_path,light_path,connect_path,eye_length,light_length);
-            //        pixelColor+= evalPath(connect_path);
-            //    }
-            //}
+            prd.depth = 1;
+            prd.path = &light_path;
+            
+            rayDir = Lp->UniformSampleDir(Light_point.position,Light_point.normal,prd.random);
+            optixTrace(optixLaunchParams.traversable,
+                Light_point.position,
+                rayDir,
+                0.f,    // tmin
+                1e20f,  // tmax
+                0.0f,   // rayTime
+                OptixVisibilityMask(255),
+                OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
+                RADIANCE_RAY_TYPE,            // SBT offset
+                RAY_TYPE_COUNT,               // SBT stride
+                RADIANCE_RAY_TYPE,            // missSBTIndex 
+                u0, u1);
+                
+            //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
+            //std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
+            for (int eye_length = 1; eye_length <= eye_path.length; eye_length++)
+            {
+                for (int light_length = 1; light_length <= light_path.length; light_length++)
+                {
+                    //可见性判断
+                    //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
+                    vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
+                    vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
+                    vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
+                    vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
+                    //std::printf("initing connection\n");
+                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
+                    //std::printf("tracing\n");
+                    packPointer(&dir_hit, u0, u1);
+                    optixTrace(optixLaunchParams.traversable,
+                        eyeLastPoint + 1e-3f * Ng,
+                        lightDir,
+                        0.f,    // tmin
+                        1e20f,  // tmax
+                        0.0f,   // rayTime
+                        OptixVisibilityMask(255),
+                        OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                        SHADOW_RAY_TYPE,            // SBT offset
+                        RAY_TYPE_COUNT,               // SBT stride
+                        SHADOW_RAY_TYPE,            // missSBTIndex 
+                        u0, u1);
+                    //printf("we try?\n");
+                    if (dir_hit.x == -1)
+                    {
+                        //std::printf("color %f\n", pixelColor.r);
+                        Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
+                        pixelColor += evalPath(connect_path);
+                        
+                    }
+                }
+            }
+            
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);

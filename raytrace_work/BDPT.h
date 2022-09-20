@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "gdt/math/vec.h"
 #include "LaunchParams.h"
-#define Maxdepth 30
+#define Maxdepth 10
 namespace osc {
     using namespace gdt;
     struct M_extansion {
@@ -15,8 +15,8 @@ namespace osc {
         TriangleMeshSBTData* mat;
         M_extansion ext;
         int MeshID;//三角形面片id
-        float pdf;
-        
+        float pdf = 0;
+
         inline __both__ void init(vec3f _position, vec3f _normal, TriangleMeshSBTData* _mat, M_extansion _ext,int _MeshID) {
             position=_position; 
             normal = _normal; 
@@ -34,9 +34,8 @@ namespace osc {
         }
     };
     struct BDPTPath {
-        BDPTVertex vertexs[Maxdepth];
+        BDPTVertex vertexs[2*Maxdepth];
         int length;
-
     };
     
 }

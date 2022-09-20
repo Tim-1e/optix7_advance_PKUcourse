@@ -20,6 +20,7 @@ namespace osc {
 		vec3f u;
 		vec3f v;
 		int meshID;
+		int id;
 		float pdf;
 		float pdf_area;
 		LightType lightType;
@@ -94,6 +95,7 @@ namespace osc {
 			sample.u = uu;
 			sample.v = vv;
 			sample.lightType = lightType;
+			sample.id = id;
 		}
 
 		static inline __both__ vec3f UniformSampleDir(vec3f position, vec3f normal, Random& rdm)
