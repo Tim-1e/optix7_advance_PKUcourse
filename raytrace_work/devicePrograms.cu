@@ -86,7 +86,8 @@ namespace osc
                     prd.pixelColor = sbtData.emission * prd.throughout/prd.weight;
                     break;
                 case MY_NEE:
-                    prd.pixelColor = vec3f(0);
+                    prd.pixelColor = vec3f(0.f);
+                    break;
                 }
                 //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
                 prd.end = 1;
@@ -207,6 +208,7 @@ namespace osc
                 prd.pixelColor = Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
                 break;
             }
+            //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
         }
             
         const float RR = clamp(diffuse_max, 0.3f, 0.9f);//¶íÂÞË¹ÂÖÅÌ¶Ä
@@ -221,7 +223,7 @@ namespace osc
 
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
         prd.throughout = min(prd.throughout, vec3f(1e3f));
-        prd.pixelNormal = Ng;
+        prd.pixelNormal = Ns;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = max(prd.pixelColor,vec3f(0.f));
 
@@ -335,7 +337,6 @@ namespace osc
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
                     pixelColor += max(prd.pixelColor, vec3f(0.f));
-                    //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
             }
         }
 
