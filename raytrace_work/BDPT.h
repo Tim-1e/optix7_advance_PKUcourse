@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "gdt/math/vec.h"
 #include "LaunchParams.h"
-#define Maxdepth 10
+#include "config.h"
 namespace osc {
     using namespace gdt;
     struct M_extansion {

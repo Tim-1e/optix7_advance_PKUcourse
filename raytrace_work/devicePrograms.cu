@@ -18,7 +18,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "BDPT_function.h"
-
+#include "config.h"
 using namespace osc;
 
 namespace osc
@@ -29,8 +29,6 @@ namespace osc
         optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
 
-    #define Maxdepth 10
-    #define M_PIf 3.14159265359
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
     //
@@ -57,9 +55,11 @@ namespace osc
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
         if (prd.depth >= Maxdepth) {
+            prd.end = 1;
             return;
         }
         if (sbtData.emissive_) {
+            prd.end = 1;
             return;
         }
         // ------------------------------------------------------------------
@@ -128,12 +128,10 @@ namespace osc
         
         const float RR = 0.8f;//clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
         if (prd.random() > RR) {
+            prd.end = 1;
             return;
         }
 
-
-        PRD newprd;//新光线
-        uint32_t u0, u1;
         vec3f mont_dir;//光方向
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
@@ -148,24 +146,10 @@ namespace osc
         prd.path->length = prd.depth + 1;
         //取出路径顶点
         mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
-        packPointer(&newprd, u0, u1);
-        newprd.random.init(prd.random() * 0x01000000, prd.random() * 0x01000000);
-        newprd.depth = prd.depth + 1;
-        newprd.path = prd.path;
-        
-        optixTrace(optixLaunchParams.traversable,
-            surfPos + 1e-3f * Ng,
-            mont_dir,
-            0.f,    // tmin
-            1e20f,  // tmax
-            0.0f,   // rayTime
-            OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-            RADIANCE_RAY_TYPE,            // SBT offset`
-            RAY_TYPE_COUNT,               // SBT stride
-            RADIANCE_RAY_TYPE,            // missSBTIndex 
-            u0, u1);
-
+        prd.depth = prd.depth + 1;
+        prd.normal = Ng;
+        prd.sourcePos = surfPos;
+        prd.NextPos = mont_dir;
         return;
     }
 
@@ -187,6 +171,9 @@ namespace osc
 
     extern "C" __global__ void __miss__radiance()
     {
+        PRD& prd = *getPRD<PRD>();
+        prd.end = 1;
+        return;
     }
 
     extern "C" __global__ void __miss__shadow()
@@ -237,7 +224,7 @@ namespace osc
 
             prd.depth = 1;
             prd.path=&eye_path;
-
+            prd.end = 0;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -250,6 +237,21 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
+            while (!prd.end)
+            {
+                optixTrace(optixLaunchParams.traversable,
+                    prd.sourcePos + 1e-3f * prd.normal,
+                    prd.NextPos,
+                    0.f,    // tmin
+                    1e20f,  // tmax
+                    0.0f,   // rayTime
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                    RADIANCE_RAY_TYPE,            // SBT offset`
+                    RAY_TYPE_COUNT,               // SBT stride
+                    RADIANCE_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+            }
             
             //Begin the light path build
             int num = optixLaunchParams.Lights_num;
@@ -267,7 +269,7 @@ namespace osc
 
             prd.depth = 1;
             prd.path = &light_path;
-            
+            prd.end = 0;
             rayDir = Lp->UniformSampleDir(Light_point.position,Light_point.normal,prd.random);
             optixTrace(optixLaunchParams.traversable,
                 Light_point.position,
@@ -281,7 +283,22 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-                
+            while (!prd.end)
+            {
+                optixTrace(optixLaunchParams.traversable,
+                    prd.sourcePos + 1e-3f * prd.normal,
+                    prd.NextPos,
+                    0.f,    // tmin
+                    1e20f,  // tmax
+                    0.0f,   // rayTime
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                    RADIANCE_RAY_TYPE,            // SBT offset`
+                    RAY_TYPE_COUNT,               // SBT stride
+                    RADIANCE_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+            }
+
             //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
             //std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
