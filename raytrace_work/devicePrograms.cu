@@ -56,6 +56,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         PRD& prd = *getPRD<PRD>();
+        prd.pixelColor = vec3f(0.f);
         if (prd.depth >= MAX_DEPTH) {
             prd.pixelColor = vec3f(0.0f);
             prd.end = 1;
@@ -82,11 +83,12 @@ namespace osc
                     prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ light_pdf * num);
                     break;
                 case MY_BRDF:
-                    prd.pixelColor = sbtData.emission * prd.throughout ;
+                    prd.pixelColor = sbtData.emission * prd.throughout/prd.weight;
                     break;
                 case MY_NEE:
                     prd.pixelColor = vec3f(0);
                 }
+                //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
                 prd.end = 1;
                 return;
         }            
@@ -219,7 +221,7 @@ namespace osc
 
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
         prd.throughout = min(prd.throughout, vec3f(1e3f));
-        prd.pixelNormal = Ns;
+        prd.pixelNormal = Ng;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = max(prd.pixelColor,vec3f(0.f));
 
@@ -333,8 +335,8 @@ namespace osc
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
                     pixelColor += max(prd.pixelColor, vec3f(0.f));
+                    //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
             }
-            //printf("End!!");
         }
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
