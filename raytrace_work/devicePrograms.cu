@@ -300,20 +300,62 @@ namespace osc
                     u0, u1);
             }
 
-            //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
+            vec3f ContriEye[Maxdepth], ContriLight[Maxdepth];
+         
+            {//ContriEye init
+                ContriEye[0] = 1.f;
+                if (eye_path.length == 1) break;
+                const BDPTVertex& eye = eye_path.vertexs[0];
+                const BDPTVertex& firstHit = eye_path.vertexs[1];
+                vec3f eyeLine = firstHit.position - eye.position;
+                vec3f eyeDirection = normalize(eyeLine);
+                ContriEye[1] = dot(eyeDirection, eye.normal);
+            }
+
+            {//Contrilight init
+
+                const BDPTVertex& light = light_path.vertexs[0];
+                const BDPTVertex& lastMidPoint = light_path.vertexs[1];
+                vec3f lightLine = lastMidPoint.position - light.position;
+                vec3f lightDirection = normalize(lightLine);
+                float LAng = dot(light.normal, lightDirection);
+                LAng = max(LAng, 0.f);
+                ContriLight[0] = light.mat->emission;
+                if (light_path.length == 1) break;
+                ContriLight[1] = LAng* light.mat->emission;
+            }
+
+            for (int eye_point = 2; eye_point < eye_path.length; eye_point++)
+            {
+                const BDPTVertex& midPoint = eye_path.vertexs[eye_point -1];
+                const BDPTVertex& lastPoint = eye_path.vertexs[eye_point - 2];
+                const BDPTVertex& nextPoint = eye_path.vertexs[eye_point];
+                vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
+                vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
+                ContriEye[eye_point] = abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection)) * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+                ContriEye[eye_point] *= ContriEye[eye_point - 1];
+            }
+            for (int light_point = 2; light_point < light_path.length; light_point++)
+            {
+                const BDPTVertex& midPoint = light_path.vertexs[light_point - 1];
+                const BDPTVertex& lastPoint = light_path.vertexs[light_point - 2];
+                const BDPTVertex& nextPoint = light_path.vertexs[light_point];
+                vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
+                vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
+                ContriLight[light_point] = abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection)) * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+                ContriLight[light_point] *= ContriLight[light_point - 1];
+            }
+
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
                 for (int light_length = 1; light_length <= light_path.length; light_length++)
-                {
+                {                    
                     //¿É¼ûÐÔÅÐ¶Ï
-                    //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
                     vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
                     vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
                     vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
                     vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
-                    //std::printf("initing connection\n");
                     vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
-                    //std::printf("tracing\n");
                     packPointer(&dir_hit, u0, u1);
                     optixTrace(optixLaunchParams.traversable,
                         eyeLastPoint + 1e-3f * Ng,
@@ -327,21 +369,25 @@ namespace osc
                         RAY_TYPE_COUNT,               // SBT stride
                         SHADOW_RAY_TYPE,            // missSBTIndex 
                         u0, u1);
-                    //printf("we try?\n");
                     if (dir_hit.x == -1)
                     {
-                        //std::printf("color %f\n", pixelColor.r);
                         BDPTPath connect_path;
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
-                        pixelColor += evalPath(connect_path);
-                        //std::printf("color %f\n", evalPath(connect_path).r);
-                        
+                        float PdfAll;
+                        PdfAll = evalPathPdf(connect_path);
+                        vec3f ans= ContriConnect(connect_path, eye_length,light_length)*ContriEye[eye_length-1]*ContriLight[light_length-1]/PdfAll;
+                        if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
+                        {
+                            ans = 0.f;
+                        }
+                        pixelColor += ans;
                     }
                 }
             }
             
         }
-
+        //if (ix == 1 && iy == 1)
+        //    printf("clash one frame\n");
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
         //vec4f albedo(pixelAlbedo / numPixelSamples, 1.f);
         //vec4f normal(pixelNormal / numPixelSamples, 1.f);
