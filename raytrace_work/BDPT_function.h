@@ -42,11 +42,11 @@ namespace osc {
         vec3f Le = light.mat->emission * lAng;
         throughput *= Le;
         
-        //const BDPTVertex& eye = path.vertexs[0];
-        //const BDPTVertex& firstHit = path.vertexs[1];
-        //vec3f eyeLine = firstHit.position - eye.position;
-        //vec3f eyeDirection = normalize(eyeLine);
-        //throughput *= dot(eyeDirection, eye.normal);
+        const BDPTVertex& eye = path.vertexs[0];
+        const BDPTVertex& firstHit = path.vertexs[1];
+        vec3f eyeLine = firstHit.position - eye.position;
+        vec3f eyeDirection = normalize(eyeLine);
+        throughput *= dot(eyeDirection, eye.normal);
 
         for (int i = 1; i < path.length - 1; i++)
         {
@@ -79,11 +79,7 @@ namespace osc {
 
         if (lightPathLength > 1)
         {
-            //const BDPTVertex& lastMidPoint = path.vertexs[path.length - 2];
-            //vec3f lightLine = lastMidPoint.position - light.position;
-            //vec3f lightDirection = normalize(lightLine);
-            //pdf *= abs(dot(lightDirection, light.normal)) / (2*M_PI);
-            //pdf *= 2 * M_PI;
+            pdf /= 2 * M_PI;
 
             for (int i = 1; i < lightPathLength; i++)
             {
