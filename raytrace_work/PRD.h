@@ -11,7 +11,7 @@ namespace osc {
         Random random;
         int depth;
         vec3f  sourcePos;
-        vec3f NextPos;
+        vec3f direction;
         vec3f normal;
         BDPTPath* path;
         bool end;

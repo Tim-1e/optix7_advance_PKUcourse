@@ -14,17 +14,17 @@ namespace osc {
         vec3f contri;
         contri = contriCompute(path);
 
-        for (int i = 1; i <  path.length; i++)
+        for (int i = 1; i < path.length; i++)
         {
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
         }
         //std::printf("contri:%f,length:%d,pdf:%f\n", contri.r,path.length, pdf);
-        vec3f ans = contri / pdf;
+        vec3f ans = contri / float(pdf);
         if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
         {
             return vec3f(0.0f);
         }
-        return contri / pdf;
+        return ans;
     }
 
     __forceinline__ __device__ vec3f contriCompute(const BDPTPath& path)
@@ -55,7 +55,7 @@ namespace osc {
             const BDPTVertex& nextPoint = path.vertexs[i + 1];
             vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
             vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
-            throughput *= abs(dot(midPoint.normal, lastDirection)) * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+            throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection)) * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
         }
         return throughput;
     }

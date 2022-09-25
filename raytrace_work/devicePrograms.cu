@@ -44,7 +44,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         vec2i& dir_hit = *getPRD<vec2i>();
-        if (dir_hit.x == sbtData.ID ||dir_hit.y == optixGetPrimitiveIndex()) {
+        if (dir_hit.x == sbtData.ID && dir_hit.y == optixGetPrimitiveIndex()) {
             dir_hit.x = -1;
         }
     }
@@ -149,7 +149,7 @@ namespace osc
         prd.depth = prd.depth + 1;
         prd.normal = Ng;
         prd.sourcePos = surfPos;
-        prd.NextPos = mont_dir;
+        prd.direction = mont_dir;
         return;
     }
 
@@ -222,7 +222,7 @@ namespace osc
 
             eye_path.vertexs[0].init(camera.position);
             eye_path.vertexs[0].normal = camera.direction;
-
+            eye_path.length = 1;
             prd.depth = 1;
             prd.path=&eye_path;
             prd.end = 0;
@@ -242,7 +242,7 @@ namespace osc
             {
                 optixTrace(optixLaunchParams.traversable,
                     prd.sourcePos + 1e-3f * prd.normal,
-                    prd.NextPos,
+                    prd.direction,
                     0.f,    // tmin
                     1e20f,  // tmax
                     0.0f,   // rayTime
@@ -288,7 +288,7 @@ namespace osc
             {
                 optixTrace(optixLaunchParams.traversable,
                     prd.sourcePos + 1e-3f * prd.normal,
-                    prd.NextPos,
+                    prd.direction,
                     0.f,    // tmin
                     1e20f,  // tmax
                     0.0f,   // rayTime
@@ -301,10 +301,9 @@ namespace osc
             }
 
             //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
-            //std::printf("we get there with %d and %d\n", eye_path.length, light_path.length);
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
-                for (int light_length = 1; light_length <= light_path.length; light_length++)
+                for (int light_length = 1; light_length <= 1; light_length++)
                 {
                     //¿É¼ûÐÔÅÐ¶Ï
                     //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
