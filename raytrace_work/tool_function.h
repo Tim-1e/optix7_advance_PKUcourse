@@ -267,19 +267,5 @@
             + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
         return out * clamp(dot(N, L), 0.0f, 1.0f);
     }
-
-    static __forceinline__  __device__
-    vec3f MIS(vec3f V, PdfType type) {
-        switch (type)
-        {
-        case osc::DirectLight:
-            //Pdf_brdf()
-            break;
-        case osc::InDirectLight:
-            break;
-        default: printf("MIS error");
-            break;
-        }
-    }
 }
 

@@ -204,12 +204,23 @@ namespace osc {
           if (mesh->emission.x + mesh->emission.y + mesh->emission.z > 0.1) mesh->emissive_ = 1;
           mesh->Kr = (const float&)materials[materialID].ior;
           mesh->d = (const float&)materials[materialID].dissolve;
-          mesh->roughness = materials[materialID].roughness;
-          mesh->metallic = materials[materialID].metallic;
-          mesh->sheen = materials[materialID].sheen;
+
+          // PBR extension
+          float sum_specular = mesh->spec[0] + mesh->spec[1] + mesh->spec[2];
+          sum_specular *= 10;
+          float sum_diffuse = mesh->diffuse[0] + mesh->diffuse[1] + mesh->diffuse[2];
+
+          mesh->roughness = clamp<float>(1 / (1 + materials[materialID].shininess), 0.f, 1.f);
+          //materials[materialID].roughness;
+          mesh->metallic = 0.5 * sum_specular / (sum_diffuse + sum_specular); //materials[materialID].metallic;
+          mesh->specular = 0.5; //mesh->metallic;
+
+          mesh->sheen = 0; //materials[materialID].sheen;
+          // if the material is fabric type
+          if (materials[materialID].name[0] == 'f' && materials[materialID].name[1] == 'a' && materials[materialID].name[2] == 'b')
+              mesh->sheen = 0.9;
           //the deflaut const
           mesh->subsurface = 0.f;
-          mesh->specular = 0.5f;
           mesh->specularTint = 0.f;
           mesh->clearcoat = 0.f;
           mesh->clearcoatGloss = 1.f;

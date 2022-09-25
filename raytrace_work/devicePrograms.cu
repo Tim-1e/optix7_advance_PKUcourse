@@ -221,6 +221,7 @@ namespace osc
             //Begin the eye path build
 
             eye_path.vertexs[0].init(camera.position);
+            eye_path.vertexs[0].normal = camera.direction;
 
             prd.depth = 1;
             prd.path=&eye_path;
@@ -260,7 +261,7 @@ namespace osc
             Lp->sample(Light_point, prd.random);
 
             light_path.length = 1;
-            light_path.vertexs[0].pdf = 1 / (2 * M_PIf);
+            light_path.vertexs[0].pdf = Light_point.pdf;
             TriangleMeshSBTData mat;
             mat.ID = Light_point.id;
             mat.emission = Lp->emission;
