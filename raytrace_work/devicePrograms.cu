@@ -303,7 +303,7 @@ namespace osc
             //std::printf("l_pdf %f\n", light_path.vertexs[0].pdf);
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
-                for (int light_length = 1; light_length <= 1; light_length++)
+                for (int light_length = 1; light_length <= light_path.length; light_length++)
                 {
                     //¿É¼ûÐÔÅÐ¶Ï
                     //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
