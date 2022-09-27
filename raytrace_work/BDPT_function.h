@@ -14,7 +14,7 @@ namespace osc {
         vec3f contri;
         contri = contriCompute(path);
 
-        for (int i = 1; i < path.length; i++)
+        for (int i = 1; i < path.length - 1; i++)
         {
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
         }
