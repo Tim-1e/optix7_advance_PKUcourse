@@ -93,7 +93,7 @@ namespace osc
         if (dot(Ng, Ns) < 0.f)
             Ns -= 2.f * dot(Ng, Ns) * Ng;
         Ns = normalize(Ns);
-
+        Ns = Ng;// use geomatics normal
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
         // available

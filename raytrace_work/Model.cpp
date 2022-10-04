@@ -212,7 +212,7 @@ namespace osc {
 
           mesh->roughness = clamp<float>(1 / (1 + materials[materialID].shininess), 0.f, 1.f);
           //materials[materialID].roughness;
-          mesh->metallic = 0.5 * sum_specular / (sum_diffuse + sum_specular); //materials[materialID].metallic;
+          mesh->metallic = 0;//0.5 * sum_specular / (sum_diffuse + sum_specular); //materials[materialID].metallic;
           mesh->specular = 0.5; //mesh->metallic;
 
           mesh->sheen = 0; //materials[materialID].sheen;
