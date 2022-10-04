@@ -1,11 +1,11 @@
 # pragma once
 # define VISUALIZE true
-# define DOWNLOAD 1
+# define DOWNLOAD 0
 # define DOWNLOAD_DIR "../../output/"
-# define FIXED_CAMERA 1
+# define FIXED_CAMERA 0
 # define VISIBLE_MOUSE 0
 
-# define MAX_DEPTH 7
+# define MAX_DEPTH 10
 
 # define MY_BRDF 0
 # define MY_NEE 1

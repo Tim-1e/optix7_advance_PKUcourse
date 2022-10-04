@@ -214,9 +214,9 @@ namespace osc {
         // the light 
         std::vector<LightParams> All_Lights;
 
-      Model *model = loadOBJ("../../models/sponza2.obj", All_Lights); 
-      Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                                      /* at */model->bounds.center()-vec3f(0,400,0),
+      Model *model = loadOBJ("../../models/easy.obj", All_Lights); 
+      Camera camera = { /*from*/vec3f(5.3196f,7.24334f,5.39261f),
+                                      /* at */vec3f(-224.429f,-202.79f,-244.616f),
                                       /* up */vec3f(0.f,1.f,0.f) };
 
       // something approximating the scale of the world, so the
