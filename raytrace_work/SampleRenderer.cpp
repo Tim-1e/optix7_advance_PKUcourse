@@ -831,7 +831,7 @@ namespace osc {
     // resize our cuda frame buffer
     denoisedBuffer.resize(newSize.x*newSize.y*sizeof(float4));
     fbColor.resize(newSize.x*newSize.y*sizeof(float4));
-    fbNormal.resize(newSize.x*newSize.y*sizeof(float4)); 
+    fbNormal.resize(newSize.x*newSize.y*sizeof(float4));
     fbAlbedo.resize(newSize.x*newSize.y*sizeof(float4));
     finalColorBuffer.resize(newSize.x*newSize.y*sizeof(uint32_t));
     fbeyePath.resize(newSize.x * newSize.y * sizeof(BDPTVertex)* Maxdepth);

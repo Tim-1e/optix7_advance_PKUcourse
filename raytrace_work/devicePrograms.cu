@@ -218,7 +218,6 @@ namespace osc
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
             BDPTPath eye_path,light_path,connect_path;
-            //printf("frame %d %d with id %d and gap is %ld\n", ix, iy, fbIndex, sizeof(BDPTVertex));
             eye_path.vertexs = (BDPTVertex*)optixLaunchParams.eyePath+fbIndex*Maxdepth;
             light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + fbIndex * Maxdepth;
             connect_path.vertexs = (BDPTVertex*)optixLaunchParams.connectPath + fbIndex * Maxdepth*2;
