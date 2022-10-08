@@ -134,9 +134,9 @@ namespace osc {
     CUDABuffer All_LightBuffer;
 
     /*path*/
-    //CUDABuffer  fbeyePath;
-    //CUDABuffer  fblightPath;
-    //CUDABuffer  fbconnectPath;
+    CUDABuffer  fbeyePath;
+    CUDABuffer  fblightPath;
+    CUDABuffer  fbconnectPath;
 
     /*! the color buffer we use during _rendering_, which is a bit
         larger than the actual displayed frame buffer (to account for

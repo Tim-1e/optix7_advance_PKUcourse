@@ -2,6 +2,7 @@
 #include "gdt/math/vec.h"
 #include "LaunchParams.h"
 #include "config.h"
+
 namespace osc {
     using namespace gdt;
     struct M_extansion {
@@ -34,7 +35,7 @@ namespace osc {
         }
     };
     struct BDPTPath {
-        BDPTVertex vertexs[2*Maxdepth];
+        BDPTVertex *vertexs;
         int length;
     };
     
