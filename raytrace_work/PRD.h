@@ -13,8 +13,10 @@ namespace osc {
         vec3f  sourcePos;
         vec3f direction;
         vec3f normal;
+        vec3f lightColor;
         BDPTPath* path;
         bool end;
+        bool TouchtheLight;
         //vec3f  pixelColor;
         //vec3f  pixelNormal;
         //vec3f  pixelAlbedo;

@@ -16,6 +16,7 @@ namespace osc {
 
         for (int i = 1; i < path.length - 1; i++)
         {
+            if (i > Maxdepth || path.length - i > Maxdepth) continue;
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
         }
         //std::printf("contri:%f,length:%d,pdf:%f\n", contri.r,path.length, pdf);

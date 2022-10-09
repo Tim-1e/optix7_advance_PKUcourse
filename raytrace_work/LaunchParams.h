@@ -18,12 +18,13 @@
 #include "gdt/math/vec.h"
 #include "optix7.h"
 #include "LightParams.h"
-
+#include "config.h"
 namespace osc {
   using namespace gdt;
 
   // for this simple example, we have a single ray type
   enum { RADIANCE_RAY_TYPE=0, SHADOW_RAY_TYPE, RAY_TYPE_COUNT };
+  enum { LIGHT_GENERATE = 0, EYE_GENERATE,GENERATE_COUNT };
   struct TriangleMeshSBTData {
       vec3f  color;
       vec3f* vertex;
@@ -59,7 +60,8 @@ namespace osc {
   
   struct LaunchParams
   {
-    int numPixelSamples = 1;
+    int numPixelSamples = OneLightRayIterNum;
+    int LightVertexNum = 0;
     struct {
       int       frameID = 0;
       float4   *colorBuffer;
@@ -83,7 +85,7 @@ namespace osc {
     void* eyePath; 
     void*  lightPath;
     void*  connectPath;
-
+    int* lightPathNum;
     OptixTraversableHandle traversable;
   };
   

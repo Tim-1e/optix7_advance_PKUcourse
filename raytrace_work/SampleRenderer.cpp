@@ -375,23 +375,35 @@ namespace osc {
   void SampleRenderer::createRaygenPrograms()
   {
     // we do a single ray gen program in this example:
-    raygenPGs.resize(1);
+    raygenPGs.resize(GENERATE_COUNT);
       
     OptixProgramGroupOptions pgOptions = {};
     OptixProgramGroupDesc pgDesc    = {};
     pgDesc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
     pgDesc.raygen.module            = module;           
+    char log[2048];
+    size_t sizeof_log = sizeof(log);
+
+    //
+    pgDesc.raygen.entryFunctionName = "__raygen__lightGen";
+    OPTIX_CHECK(optixProgramGroupCreate(optixContext,
+        &pgDesc,
+        1,
+        &pgOptions,
+        log, &sizeof_log,
+        &raygenPGs[LIGHT_GENERATE]
+    ));
+    if (sizeof_log > 1) PRINT(log);
+
+    //
     pgDesc.raygen.entryFunctionName = "__raygen__renderFrame";
 
-    // OptixProgramGroup raypg;
-    char log[2048];
-    size_t sizeof_log = sizeof( log );
     OPTIX_CHECK(optixProgramGroupCreate(optixContext,
                                         &pgDesc,
                                         1,
                                         &pgOptions,
                                         log,&sizeof_log,
-                                        &raygenPGs[0]
+                                        &raygenPGs[EYE_GENERATE]
                                         ));
     if (sizeof_log > 1) PRINT(log);
   }
@@ -624,18 +636,35 @@ namespace osc {
       launchParams.frame.frameID = 0;
     launchParamsBuffer.upload(&launchParams,1);
     launchParams.frame.frameID++;
-    
+
+    launchParams.LightVertexNum = 0;
+    sbt.raygenRecord = raygenRecordsBuffer.d_pointer();
     OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
-                            pipeline,stream,
-                            /*! parameters and SBT */
-                            launchParamsBuffer.d_pointer(),
-                            launchParamsBuffer.sizeInBytes,
-                            &sbt,
-                            /*! dimensions of the launch: */
-                            launchParams.frame.size.x,
-                            launchParams.frame.size.y,
-                            1
-                            ));
+        pipeline, stream,
+        /*! parameters and SBT */
+        launchParamsBuffer.d_pointer(),
+        launchParamsBuffer.sizeInBytes,
+        &sbt,
+        /*! dimensions of the launch: */
+        LightRayGenerateNum,
+        LightRayGenerateNum,
+        1
+    ));
+
+    cudaDeviceSynchronize();
+
+    sbt.raygenRecord = raygenRecordsBuffer.d_pointer()+sizeof(RaygenRecord);
+    OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
+        pipeline, stream,
+        /*! parameters and SBT */
+        launchParamsBuffer.d_pointer(),
+        launchParamsBuffer.sizeInBytes,
+        &sbt,
+        /*! dimensions of the launch: */
+        launchParams.frame.size.x,
+        launchParams.frame.size.y,
+        1
+    ));
 
     denoiserIntensity.resize(sizeof(float));
 
@@ -835,7 +864,8 @@ namespace osc {
     fbAlbedo.resize(newSize.x*newSize.y*sizeof(float4));
     finalColorBuffer.resize(newSize.x*newSize.y*sizeof(uint32_t));
     fbeyePath.resize(newSize.x * newSize.y * sizeof(BDPTVertex)* Maxdepth);
-    fblightPath.resize(newSize.x * newSize.y * sizeof(BDPTVertex) * Maxdepth);
+    fblightPathNum.resize(LightRayGenerateNum * LightRayGenerateNum * sizeof(int));
+    fblightPath.resize(LightRayGenerateNum * LightRayGenerateNum * sizeof(BDPTVertex) * Maxdepth);
     fbconnectPath.resize(newSize.x * newSize.y * sizeof(BDPTVertex) * Maxdepth*2);
 
     // update the launch parameters that we'll pass to the optix
@@ -847,7 +877,7 @@ namespace osc {
     launchParams.eyePath = (void*)fbeyePath.d_pointer();
     launchParams.lightPath= (void*)fblightPath.d_pointer();
     launchParams.connectPath = (void*)fbconnectPath.d_pointer();
-
+    launchParams.lightPathNum = (int*)fblightPathNum.d_pointer();
     // and re-set the camera, since aspect may have changed
     setCamera(lastSetCamera);
 

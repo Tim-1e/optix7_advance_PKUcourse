@@ -6,3 +6,5 @@
 # define VISIBLE_MOUSE 1
 #define Maxdepth 10
 #define M_PIf 3.14159265359
+#define OneLightRayIterNum 1
+#define LightRayGenerateNum 100//’‚ «sqrt÷µ
