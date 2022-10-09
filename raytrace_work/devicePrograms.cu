@@ -44,6 +44,7 @@ namespace osc
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
         vec2i& dir_hit = *getPRD<vec2i>();
+
         if (dir_hit.x == sbtData.ID && dir_hit.y == optixGetPrimitiveIndex()) {
             dir_hit.x = -1;
         }
@@ -273,7 +274,7 @@ namespace osc
             prd.end = 0;
             rayDir = Lp->UniformSampleDir(Light_point.position,Light_point.normal,prd.random);
             optixTrace(optixLaunchParams.traversable,
-                Light_point.position,
+                Light_point.position + 1e-3f * Light_point.normal,
                 rayDir,
                 0.f,    // tmin
                 1e20f,  // tmax
