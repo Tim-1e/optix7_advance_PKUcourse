@@ -233,7 +233,7 @@ namespace osc
             prd.end = 0;
             rayDir = Lp->UniformSampleDir(Light_point.position, Light_point.normal, prd.random);
             optixTrace(optixLaunchParams.traversable,
-                Light_point.position,
+                Light_point.position+1e-3f*Light_point.normal,
                 rayDir,
                 0.f,    // tmin
                 1e20f,  // tmax
@@ -289,7 +289,7 @@ namespace osc
                 / vec2f(optixLaunchParams.frame.size));
 
             //calcu all num
-            int LightVertexNum=0;
+            int LightVertexNum = 0;
             for (int i = 0; i < LightRayGenerateNum * LightRayGenerateNum; i++)
             {
                 LightVertexNum += optixLaunchParams.lightPathNum[i];
@@ -346,37 +346,45 @@ namespace osc
             }
 
 
-            int  light_length = int(prd.random() * light_path.length)+1;
-            int eye_length = eye_path.length;
-            //printf("we choose light%d and its length should be %d,then we get%d %d %d\n", light_choose, optixLaunchParams.lightPathNum[light_choose], light_path.length, light_length, eye_length);
-            //可见性判断
-            vec3f eyeLastPoint = eye_path.vertexs[eye_length-1].position;
-            vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
-            vec3f lightLastPoint = light_path.vertexs[light_length-1].position;
-            vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
-            vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
-            packPointer(&dir_hit, u0, u1);
-            optixTrace(optixLaunchParams.traversable,
-                eyeLastPoint + 1e-3f * Ng,
-                lightDir,
-                0.f,    // tmin
-                1e20f,  // tmax
-                0.0f,   // rayTime
-                OptixVisibilityMask(255),
-                OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                SHADOW_RAY_TYPE,            // SBT offset
-                RAY_TYPE_COUNT,               // SBT stride
-                SHADOW_RAY_TYPE,            // missSBTIndex 
-                u0, u1);
-            if (dir_hit.x == -1)
+            //int  light_length_choose = int(prd.random() * light_path.length) + 1;
+            int  light_length_choose =light_path.length;
+            //float pdf = float(LightRayGenerateNum) / LightVertexNum;
+            float pdf = 1.f;
+            for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
-                float pdf = float(LightRayGenerateNum) / LightVertexNum;
-                Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
-                pixelColor += evalPath(connect_path)/pdf;
+                for (int light_length = 1; light_length <= light_length_choose; light_length++)
+                {
+                    //可见性判断
+                    //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
+                    vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
+                    vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
+                    vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
+                    vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
+                    //std::printf("initing connection\n");
+                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
+                    //std::printf("tracing\n");
+                    packPointer(&dir_hit, u0, u1);
+                    optixTrace(optixLaunchParams.traversable,
+                        eyeLastPoint + 1e-3f * Ng,
+                        lightDir,
+                        0.f,    // tmin
+                        1e20f,  // tmax
+                        0.0f,   // rayTime
+                        OptixVisibilityMask(255),
+                        OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                        SHADOW_RAY_TYPE,            // SBT offset
+                        RAY_TYPE_COUNT,               // SBT stride
+                        SHADOW_RAY_TYPE,            // missSBTIndex 
+                        u0, u1);
+                    if (dir_hit.x == -1)
+                    {
+                        Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
+                        pixelColor += evalPath(connect_path) / pdf;
+
+                    }
+                }
             }
-
         }
-
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
 
         // and write/accumulate to frame buffer ...
