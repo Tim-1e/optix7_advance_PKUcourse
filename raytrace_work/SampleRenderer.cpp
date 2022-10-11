@@ -83,7 +83,7 @@ namespace osc {
           TriangleMesh& mesh = *model->meshes[meshID];
           if (!mesh.emissive_) continue;
           LightParams triangle_light(TRIANGLE, meshID);
-          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
+          triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(), mesh.emission, mesh.index.size());
           lights.push_back(triangle_light);
       }
       //std::cout << lights.size()<<std::endl;

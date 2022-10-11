@@ -91,7 +91,6 @@ namespace osc {
 			sample.normal = normalize(cross(uu, vv));
 			sample.emission = emission;
 			sample.pdf = 1.0 / sample.pdf_area;
-			sample.origin = A;
 			sample.u = uu;
 			sample.v = vv;
 			sample.lightType = lightType;
@@ -114,6 +113,8 @@ namespace osc {
 			float phi = 2.f * M_PIf * r2;
 			float x = r * cosf(phi);
 			float y = r * sinf(phi);
+			//vec3f raydir= normalize(x * uu + y * vv - z * normal);
+			//printf("normal is %f %f %f\n", raydir.x, raydir.y, raydir.z);
 			return normalize(x*uu+y*vv+z*normal);
 		}
 	};

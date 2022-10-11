@@ -14,12 +14,12 @@ namespace osc {
         vec3f contri;
         contri = contriCompute(path);
 
-        for (int i = 1; i < path.length - 1; i++)
+        for (int i = 1; i < path.length-1; i++)
         {
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
         }
         //std::printf("contri:%f,length:%d,pdf:%f\n", contri.r,path.length, pdf);
-        vec3f ans = contri / float(pdf);
+        vec3f ans = contri / pdf;
         if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
         {
             return vec3f(0.0f);
@@ -76,6 +76,7 @@ namespace osc {
 
         const BDPTVertex& light = path.vertexs[path.length - 1];
         pdf *= light.pdf;
+
 
         if (lightPathLength > 1)
         {
