@@ -3,7 +3,6 @@
 *#
 bin
 build
-output
 *.autosave
 *.gz
 *.zip
@@ -12,9 +11,6 @@ Session.vim
 *.mp4
 *.pptx
 *.pdf
-
-# lbx 的部分不上传的文件以 __U___ 开头
-__U___*
 
 git_token.txt
 
