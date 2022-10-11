@@ -260,6 +260,10 @@ namespace osc
                     u0, u1);
             }
             *lightPathNum = light_path.length;
+            for (int i = 0; i < light_path.length; i++)
+            {
+                printf("we generate light %d ,the vertex %d at %f %f %f\n", fbIndex,i, light_path.vertexs[i].position.x, light_path.vertexs[i].position.y, light_path.vertexs[i].position.z);
+            }
     }
 
     //------------------------------------------------------------------------------
@@ -289,12 +293,12 @@ namespace osc
                 / vec2f(optixLaunchParams.frame.size));
 
             //calcu all num
-            int LightVertexNum = 0;
-            for (int i = 0; i < LightRayGenerateNum * LightRayGenerateNum; i++)
-            {
-                LightVertexNum += optixLaunchParams.lightPathNum[i];
-                //if (!ix && !iy) printf("light %d has %d\n", i, optixLaunchParams.lightPathNum[i]);
-            }
+            //int LightVertexNum = 0;
+            //for (int i = 0; i < LightRayGenerateNum * LightRayGenerateNum; i++)
+            //{
+            //    LightVertexNum += optixLaunchParams.lightPathNum[i];
+            //    if (!ix && !iy) printf("light %d has %d\n", i, optixLaunchParams.lightPathNum[i]);
+            //}
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
@@ -304,6 +308,17 @@ namespace osc
             int light_choose = int(prd.random() * LightRayGenerateNum * LightRayGenerateNum);
             light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + light_choose * Maxdepth;
             light_path.length = *((int*)optixLaunchParams.lightPathNum + light_choose);
+            
+            if (!ix && !iy)
+            for (int i = 0; i < LightRayGenerateNum * LightRayGenerateNum; i++)
+            {
+                light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + i * Maxdepth;
+                int length = optixLaunchParams.lightPathNum[i];
+                for (int t = 0; t < length; t++)
+                {
+                    printf("receive light %d ,the vertex %d at %f %f %f\n", i,t, light_path.vertexs[t].position.x, light_path.vertexs[t].position.y, light_path.vertexs[t].position.z);
+                }
+            }
 
             //Begin the eye path build
             eye_path.vertexs[0].init(camera.position);
@@ -352,7 +367,7 @@ namespace osc
             float pdf = 1.f;
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
-                for (int light_length = 1; light_length <= light_length_choose; light_length++)
+                for (int light_length = 1; light_length <= light_path.length; light_length++)
                 {
                     //¿É¼ûÐÔÅÐ¶Ï
                     //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
@@ -380,7 +395,6 @@ namespace osc
                     {
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                         pixelColor += evalPath(connect_path) / pdf;
-
                     }
                 }
             }
@@ -393,6 +407,8 @@ namespace osc
             rgba += float(optixLaunchParams.frame.frameID) * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);
             rgba /= (optixLaunchParams.frame.frameID + 1.f);
         }
+       //if (pixelColor.x <  10.f && pixelColor.x>0.f) printf("%d %d is ok\n", ix, iy);
+       //if (ix==576 && iy==281) printf("we draw color as %f %f %f at %d %d\n", pixelColor.x, pixelColor.y, pixelColor.z);
         optixLaunchParams.frame.colorBuffer[fbIndex] = (float4)rgba;
     }
 

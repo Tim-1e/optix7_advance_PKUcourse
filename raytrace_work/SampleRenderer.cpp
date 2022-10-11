@@ -637,34 +637,53 @@ namespace osc {
     launchParamsBuffer.upload(&launchParams,1);
     launchParams.frame.frameID++;
 
-    launchParams.LightVertexNum = 0;
-    sbt.raygenRecord = raygenRecordsBuffer.d_pointer();
-    OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
-        pipeline, stream,
-        /*! parameters and SBT */
-        launchParamsBuffer.d_pointer(),
-        launchParamsBuffer.sizeInBytes,
-        &sbt,
-        /*! dimensions of the launch: */
-        LightRayGenerateNum,
-        LightRayGenerateNum,
-        1
-    ));
-
-    cudaDeviceSynchronize();
-
-    sbt.raygenRecord = raygenRecordsBuffer.d_pointer()+sizeof(RaygenRecord);
-    OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
-        pipeline, stream,
-        /*! parameters and SBT */
-        launchParamsBuffer.d_pointer(),
-        launchParamsBuffer.sizeInBytes,
-        &sbt,
-        /*! dimensions of the launch: */
-        launchParams.frame.size.x,
-        launchParams.frame.size.y,
-        1
-    ));
+    if (launchParams.frame.frameID ==1) {
+        //printf("frame %d,draw light\n", launchParams.frame.frameID);
+        sbt.raygenRecord = raygenRecordsBuffer.d_pointer();
+        OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
+            pipeline, stream,
+            /*! parameters and SBT */
+            launchParamsBuffer.d_pointer(),
+            launchParamsBuffer.sizeInBytes,
+            &sbt,
+            /*! dimensions of the launch: */
+            LightRayGenerateNum,
+            LightRayGenerateNum,
+            1
+        ));
+        cudaDeviceSynchronize();
+        printf("frame %d,render\n", launchParams.frame.frameID);
+        sbt.raygenRecord = raygenRecordsBuffer.d_pointer() + sizeof(RaygenRecord);
+        OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
+            pipeline, stream,
+            /*! parameters and SBT */
+            launchParamsBuffer.d_pointer(),
+            launchParamsBuffer.sizeInBytes,
+            &sbt,
+            /*! dimensions of the launch: */
+            launchParams.frame.size.x,
+            launchParams.frame.size.y,
+            1
+        ));
+    }
+    else
+    {
+        printf("frame %d,render\n", launchParams.frame.frameID);
+        sbt.raygenRecord = raygenRecordsBuffer.d_pointer() + sizeof(RaygenRecord);
+        OPTIX_CHECK(optixLaunch(/*! pipeline we're launching launch: */
+            pipeline, stream,
+            /*! parameters and SBT */
+            launchParamsBuffer.d_pointer(),
+            launchParamsBuffer.sizeInBytes,
+            &sbt,
+            /*! dimensions of the launch: */
+            launchParams.frame.size.x,
+            launchParams.frame.size.y,
+            1
+        ));
+        cudaDeviceSynchronize();
+        system("pause");
+    }
 
     denoiserIntensity.resize(sizeof(float));
 

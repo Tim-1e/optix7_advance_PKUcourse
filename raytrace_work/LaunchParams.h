@@ -61,7 +61,6 @@ namespace osc {
   struct LaunchParams
   {
     int numPixelSamples = OneLightRayIterNum;
-    int LightVertexNum = 0;
     struct {
       int       frameID = 0;
       float4   *colorBuffer;
