@@ -80,9 +80,9 @@ namespace osc {
     LightParams* All_Lights;
     int Lights_num;
 
-    //BDPTVertex* eyePath; 
-    //BDPTVertex*  lightPath;
-    //BDPTVertex*  connectPath;
+    void* eyePath; 
+    void*  lightPath;
+    void*  connectPath;
 
     OptixTraversableHandle traversable;
   };

@@ -204,6 +204,7 @@ namespace osc
         packPointer(&prd, u0, u1);
 
         int numPixelSamples = optixLaunchParams.numPixelSamples;
+        const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
 
         vec3f pixelColor = 0.f;
         //vec3f pixelNormal = 0.f;
@@ -217,10 +218,13 @@ namespace osc
 
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
-            BDPTPath eye_path,light_path;
-            //std::printf("pdf %f\n", eye_path.vertexs[0].pdf);
-            //Begin the eye path build
+            BDPTPath eye_path,light_path,connect_path;
+            //printf("frame %d %d with id %d and gap is %ld\n", ix, iy, fbIndex, sizeof(BDPTVertex));
+            eye_path.vertexs = (BDPTVertex*)optixLaunchParams.eyePath+fbIndex*Maxdepth;
+            light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + fbIndex * Maxdepth;
+            connect_path.vertexs = (BDPTVertex*)optixLaunchParams.connectPath + fbIndex * Maxdepth*2;
 
+            //Begin the eye path build
             eye_path.vertexs[0].init(camera.position);
             eye_path.vertexs[0].normal = camera.direction;
             eye_path.length = 1;
@@ -332,7 +336,6 @@ namespace osc
                     if (dir_hit.x == -1)
                     {
                         //std::printf("color %f\n", pixelColor.r);
-                        BDPTPath connect_path;
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                         pixelColor += evalPath(connect_path);
                         //std::printf("color %f\n", evalPath(connect_path).r);
@@ -348,7 +351,6 @@ namespace osc
         //vec4f normal(pixelNormal / numPixelSamples, 1.f);
         
         // and write/accumulate to frame buffer ...
-        const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
         if (optixLaunchParams.frame.frameID > 0)
         {
             rgba += float(optixLaunchParams.frame.frameID) * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);
