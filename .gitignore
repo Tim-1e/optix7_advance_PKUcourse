@@ -3,6 +3,7 @@
 *#
 bin
 build
+output/*
 *.autosave
 *.gz
 *.zip
