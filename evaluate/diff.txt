@@ -1,0 +1,4 @@
+ref: ..\ground_truth\2400s.png
+test: ..\ground_truth\1200s.png
+mse: 0.37327
+mape: 0.57265%
