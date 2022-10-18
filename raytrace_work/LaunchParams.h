@@ -30,7 +30,7 @@ namespace osc {
       vec3i* index;
 
       bool  hasTexture;
-      int ID;
+      int ID;//表明物体编号
       vec3f emission;
       bool emissive_;
       float d;//refractable
@@ -77,6 +77,10 @@ namespace osc {
 
     LightParams* All_Lights;
     int Lights_num;
+
+    void* eyePath; 
+    void*  lightPath;
+    void*  connectPath;
 
     OptixTraversableHandle traversable;
   };

@@ -10,16 +10,15 @@ namespace osc {
     struct PRD {
         Random random;
         int depth;
-        vec3f throughout;
-        vec3f  pixelColor;
-        vec3f  pixelNormal;
-        vec3f  pixelAlbedo;
         vec3f  sourcePos;
-        int MeshId;
-        int PrimId;
-        BDPTVertex* vertexs;
-
-        //float refraction_index;//当前光线相对于空气的折射率
+        vec3f direction;
+        vec3f normal;
+        BDPTPath* path;
+        bool end;
+        //vec3f  pixelColor;
+        //vec3f  pixelNormal;
+        //vec3f  pixelAlbedo;
+        //float refraction_index;
     };
 }
 

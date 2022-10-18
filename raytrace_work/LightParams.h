@@ -19,6 +19,8 @@ namespace osc {
 		vec3f origin;
 		vec3f u;
 		vec3f v;
+		int meshID;
+		int id;
 		float pdf;
 		float pdf_area;
 		LightType lightType;
@@ -26,12 +28,12 @@ namespace osc {
 		inline __both__ float Pdf_Light(vec3f ray_origin, vec3f dir) {
 			vec3f cast_pos, pos_to_cast;
 			float pdu, pdv, udu, udv, vdv;
-			float u_cast, v_cast, u_length, v_length;
+			float u_cast, v_cast;
 			float mydist;
 			//Plane insert
-			if (dot(normal, dir) == 0) {//判断有无交点
-				if (dot(ray_origin - origin, normal) == 0) return 1;//在平面上,返回0
-				else return 0;//非平面,无穷
+			if (dot(normal, dir) == 0) {
+				if (dot(ray_origin - origin, normal) == 0) return 1;
+				else return 0;
 			}
 			mydist = -dot(ray_origin - origin, normal) / dot(dir, normal);
 			if (mydist < 0) return 0;
@@ -71,8 +73,7 @@ namespace osc {
 			num = num_;
 		}
 
-		inline __both__ void sample(LightSample& sample, Random& rdm, int chose) {
-			// Add this prefix to try to fit in cuda
+		inline __both__ void sample(LightSample& sample, Random& rdm) {
 			const float r1 = rdm();
 			const float r2 = rdm();
 			vec3f A, B, C, uu, vv;
@@ -81,6 +82,7 @@ namespace osc {
 			C = vertex[index[chose].z];
 			uu = B - A;
 			vv = C - A;
+			sample.meshID = chose;
 			sample.origin = A;
 			sample.pdf_area = length(cross(uu, vv)) / 2 * num;
 			sample.position = (1 - sqrt(r1)) * A + sqrt(r1) * (1 - r2) * B + sqrt(r1) * r2 * C;
@@ -90,7 +92,28 @@ namespace osc {
 			sample.u = uu;
 			sample.v = vv;
 			sample.lightType = lightType;
-		};
+			sample.id = id;
+		}
 
+		static inline __both__ vec3f UniformSampleDir(vec3f position, vec3f normal, Random& rdm)
+		{
+			const float r1 = rdm();
+			const float r2 = rdm();
+			vec3f uu, vv;
+			if (normal == vec3f(0.f, 0.f, 1.f) || normal == vec3f(0.f, 0.f, -1.f))
+				uu = vec3f(0.f, 1.f, 0.f);		
+			else
+				uu = normalize(cross(normal, vec3f(0.f, 0.f, 1.f)));
+			vv = normalize(cross(uu, normal));
+			// 锟斤拷锟斤拷占锟斤拷锟饺诧拷锟斤拷
+			float z = r1;
+			float r = sqrtf(1.f - z * z);
+			float phi = 2.f * M_PIf * r2;
+			float x = r * cosf(phi);
+			float y = r * sinf(phi);
+			//vec3f raydir= normalize(x * uu + y * vv - z * normal);
+			//printf("normal is %f %f %f\n", raydir.x, raydir.y, raydir.z);
+			return normalize(x*uu+y*vv+z*normal);
+		}
 	};
 } // ::osc
