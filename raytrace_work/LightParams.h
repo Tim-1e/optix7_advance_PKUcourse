@@ -77,6 +77,7 @@ namespace osc {
 			const float r1 = rdm();
 			const float r2 = rdm();
 			vec3f A, B, C, uu, vv;
+			int chose;
 			A = vertex[index[chose].x];
 			B = vertex[index[chose].y];
 			C = vertex[index[chose].z];
