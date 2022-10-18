@@ -198,12 +198,12 @@ namespace osc {
     std::vector<uint32_t> pixels;
     struct timeStruct
     {
-#define TIME_LEN 7
+#define TIME_LEN 9
         int startTime;
         const int len = TIME_LEN;
         bool timeFlag[TIME_LEN] = { 0 };
-        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s"};
-        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000 };
+        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s", "1200s", "2400s"};
+        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000, 1200000, 2400000 };
     } myTime;
   };
 
@@ -214,14 +214,14 @@ namespace osc {
         // the light 
         std::vector<LightParams> All_Lights;
 
-        Model* model = loadOBJ("../../models/sponza3.obj" , All_Lights);
+        Model* model = loadOBJ("../../models/sponza2.obj" , All_Lights);
         Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
             /* at */model->bounds.center() - vec3f(0,400,0),
             /* up */vec3f(0.f,1.f,0.f) };
-      //Model *model = loadOBJ("../../models/easy.obj", All_Lights); 
-      //Camera camera = { /*from*/vec3f(5.3196f,7.24334f,5.39261f),
-      //                                /* at */vec3f(-224.429f,-202.79f,-244.616f),
-      //                                /* up */vec3f(0.f,1.f,0.f) };
+       //Model *model = loadOBJ("../../models/easy.obj", All_Lights); 
+       //Camera camera = { /*from*/vec3f(5.3196f,7.24334f,5.39261f),
+       //                               /* at */vec3f(-224.429f,-202.79f,-244.616f),
+       //                               /* up */vec3f(0.f,1.f,0.f) };
 
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
