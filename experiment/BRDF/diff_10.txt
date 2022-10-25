@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\BRDF\10s.png
+mse: 436.15973
+mape: 24.52738%

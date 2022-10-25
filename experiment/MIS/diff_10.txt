@@ -1,0 +1,4 @@
+ref: .\MIS\GT.png
+test: .\MIS\10s.png
+mse: 52.46303
+mape: 8.07391%

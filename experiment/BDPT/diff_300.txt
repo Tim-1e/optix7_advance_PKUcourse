@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\BDPT\300s.png
+mse: 126.15387
+mape: 10.43036%

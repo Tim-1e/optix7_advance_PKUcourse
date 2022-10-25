@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\NEE\10s.png
+mse: 250.90936
+mape: 12.67492%

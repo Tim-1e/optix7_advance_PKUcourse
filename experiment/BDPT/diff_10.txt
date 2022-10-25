@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\BDPT\10s.png
+mse: 391.55386
+mape: 19.16933%

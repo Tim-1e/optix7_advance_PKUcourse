@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\LVCBPT\180s.png
+mse: 55.06556
+mape: 6.95329%

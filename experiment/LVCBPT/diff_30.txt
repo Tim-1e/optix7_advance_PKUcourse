@@ -1,0 +1,4 @@
+ref: .\GT.png
+test: .\LVCBPT\30s.png
+mse: 330.16577
+mape: 18.68143%
