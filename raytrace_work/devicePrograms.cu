@@ -18,6 +18,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "BDPT_function.h"
+#include "LaunchParams.h"
 #include "config.h"
 using namespace osc;
 
@@ -157,7 +158,7 @@ namespace osc
 
         //std::printf("initing prd\n");
         //std::printf("length:%d,depth:%d\n",prd.path->length,prd.depth);
-        prd.path->vertexs[prd.depth].init(surfPos, Ns, (TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
+        prd.path->vertexs[prd.depth].init(surfPos, Ns, *(TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
         //std::printf("vertexs init finished\n");
         prd.path->length = prd.depth + 1;
         //取出路径顶点
@@ -210,8 +211,8 @@ namespace osc
             vec3f rayDir;
             BDPTPath light_path;
             int* lightPathNum;
-            light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + fbIndex * Maxdepth;
-            lightPathNum = (int*)optixLaunchParams.lightPathNum + fbIndex;
+            light_path.vertexs = optixLaunchParams.lightPath + fbIndex * Maxdepth;
+            lightPathNum = optixLaunchParams.lightPathNum + fbIndex;
 
 
             //Begin the light path build
@@ -226,7 +227,7 @@ namespace osc
             mat.ID = Light_point.id;
             mat.emission = Lp->emission;
             M_extansion ext;
-            light_path.vertexs[0].init(Light_point.position, Light_point.normal, &mat, ext, Light_point.meshID);
+            light_path.vertexs[0].init(Light_point.position, Light_point.normal, mat, ext, Light_point.meshID);
 
             prd.depth = 1;
             prd.path = &light_path;
@@ -260,6 +261,8 @@ namespace osc
                     u0, u1);
             }
             *lightPathNum = light_path.length;
+            //printf("ptr: %p\n", light_path.vertexs[0].mat);
+            //printf("color: %f\n", light_path.vertexs[0].mat->emission.z);
     }
 
     //------------------------------------------------------------------------------
@@ -299,12 +302,15 @@ namespace osc
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
             BDPTPath eye_path, light_path, connect_path;
-            eye_path.vertexs = (BDPTVertex*)optixLaunchParams.eyePath + fbIndex * Maxdepth;
-            connect_path.vertexs = (BDPTVertex*)optixLaunchParams.connectPath + fbIndex * Maxdepth * 2;
+            eye_path.vertexs = optixLaunchParams.eyePath + fbIndex * Maxdepth;
+            connect_path.vertexs = optixLaunchParams.connectPath + fbIndex * Maxdepth * 2;
             int light_choose = int(prd.random() * LightRayGenerateNum * LightRayGenerateNum);
-            light_path.vertexs = (BDPTVertex*)optixLaunchParams.lightPath + light_choose * Maxdepth;
-            light_path.length = *((int*)optixLaunchParams.lightPathNum + light_choose);
-
+            light_path.vertexs = optixLaunchParams.lightPath+ light_choose * Maxdepth;
+            light_path.length = *(optixLaunchParams.lightPathNum + light_choose);
+            //printf("ptr: %p\n", light_path.vertexs[0].mat);
+            //printf("ptr: %p\n", light_path.vertexs);
+            //printf("color output: %f\n", light_path.vertexs[0].mat->emission.r);
+            
             //Begin the eye path build
             eye_path.vertexs[0].init(camera.position);
             eye_path.vertexs[0].normal = camera.direction;
@@ -347,12 +353,19 @@ namespace osc
 
 
             //int  light_length_choose = int(prd.random() * light_path.length) + 1;
-            int  light_length_choose =light_path.length;
-            //float pdf = float(LightRayGenerateNum) / LightVertexNum;
-            float pdf = 1.f;
+            //int  light_length_choose = light_path.length;
+            float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
+            //float pdf = 1.f;
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
-                for (int light_length = 1; light_length <= light_length_choose; light_length++)
+                int light_choose = int(prd.random()* LightRayGenerateNum * LightRayGenerateNum);
+                int length = optixLaunchParams.lightPathNum[light_choose];
+                int length_choose = int(prd.random() * length)+1;
+
+                //printf("%d\n", light_choose);
+                light_path.vertexs = optixLaunchParams.lightPath + light_choose * Maxdepth;
+                light_path.length = length_choose;
+                for (int light_length = light_path.length; light_length <= light_path.length; light_length++)
                 {
                     //可见性判断
                     //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
@@ -361,7 +374,7 @@ namespace osc
                     vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
                     vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
                     //std::printf("initing connection\n");
-                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
+                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat.ID, light_path.vertexs[light_length - 1].MeshID);
                     //std::printf("tracing\n");
                     packPointer(&dir_hit, u0, u1);
                     optixTrace(optixLaunchParams.traversable,
@@ -379,7 +392,7 @@ namespace osc
                     if (dir_hit.x == -1)
                     {
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
-                        pixelColor += evalPath(connect_path) / pdf;
+                        pixelColor += evalPath(connect_path) * length;
 
                     }
                 }

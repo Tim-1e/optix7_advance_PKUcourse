@@ -37,6 +37,7 @@ add_executable(raytrace_work
   PRD.h
   SampleRenderer.h
   tool_function.h
+  SBTdata.h
   main.cpp
   Model.cpp
   SampleRenderer.cpp

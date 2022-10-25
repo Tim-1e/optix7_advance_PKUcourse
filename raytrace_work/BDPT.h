@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "gdt/math/vec.h"
-#include "LaunchParams.h"
 #include "config.h"
+#include "SBTdata.h"
 
 namespace osc {
     using namespace gdt;
@@ -13,12 +13,12 @@ namespace osc {
     {
         vec3f position;
         vec3f normal;
-        TriangleMeshSBTData* mat;
+        TriangleMeshSBTData mat;
         M_extansion ext;
         int MeshID;//三角形面片id
         float pdf = 0;
 
-        inline __both__ void init(vec3f _position, vec3f _normal, TriangleMeshSBTData* _mat, M_extansion _ext,int _MeshID) {
+        inline __both__ void init(vec3f _position, vec3f _normal, TriangleMeshSBTData _mat, M_extansion _ext,int _MeshID) {
             position=_position; 
             normal = _normal; 
             mat = _mat; 

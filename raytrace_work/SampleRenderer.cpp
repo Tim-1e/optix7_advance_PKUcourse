@@ -874,9 +874,9 @@ namespace osc {
     launchParams.frame.colorBuffer   = (float4*)fbColor.d_pointer();
     launchParams.frame.normalBuffer  = (float4*)fbNormal.d_pointer();
     launchParams.frame.albedoBuffer  = (float4*)fbAlbedo.d_pointer();
-    launchParams.eyePath = (void*)fbeyePath.d_pointer();
-    launchParams.lightPath= (void*)fblightPath.d_pointer();
-    launchParams.connectPath = (void*)fbconnectPath.d_pointer();
+    launchParams.eyePath = (BDPTVertex*)fbeyePath.d_pointer();
+    launchParams.lightPath= (BDPTVertex*)fblightPath.d_pointer();
+    launchParams.connectPath = (BDPTVertex*)fbconnectPath.d_pointer();
     launchParams.lightPathNum = (int*)fblightPathNum.d_pointer();
     // and re-set the camera, since aspect may have changed
     setCamera(lastSetCamera);

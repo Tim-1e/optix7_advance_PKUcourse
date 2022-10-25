@@ -14,7 +14,7 @@ namespace osc {
         vec3f contri;
         contri = contriCompute(path);
 
-        for (int i = 1; i < path.length - 1; i++)
+        for (int i = 1; i < path.length-1; i++)
         {
             if (i > Maxdepth || path.length - i > Maxdepth) continue;
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
@@ -40,9 +40,11 @@ namespace osc {
         {
             return vec3f(0.0f);
         }
-        vec3f Le = light.mat->emission * lAng;
+        vec3f Le = light.mat.emission * lAng;
         throughput *= Le;
         
+        //std::printf("color: %f %f %f\n",light.mat->emission.x, light.mat->emission.y, light.mat->emission.z);
+
         const BDPTVertex& eye = path.vertexs[0];
         const BDPTVertex& firstHit = path.vertexs[1];
         vec3f eyeLine = firstHit.position - eye.position;
@@ -56,7 +58,7 @@ namespace osc {
             const BDPTVertex& nextPoint = path.vertexs[i + 1];
             vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
             vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
-            throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection)) * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+            throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection)) * Eval(midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
         }
         return throughput;
     }
@@ -98,7 +100,7 @@ namespace osc {
                 const BDPTVertex& nextPoint = path.vertexs[path.length - i - 2];
                 vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
                 vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
-                pdf *= Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
+                pdf *= Pdf_brdf(midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
             }
 
         }
@@ -120,7 +122,7 @@ namespace osc {
             const BDPTVertex& nextPoint = path.vertexs[i + 1];
             vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
             vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
-            pdf *= Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
+            pdf *= Pdf_brdf(midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
         }
         vec3f connect_path = path.vertexs[eyePathLength].position - path.vertexs[eyePathLength - 1].position;
         pdf *= dot(connect_path, connect_path);
