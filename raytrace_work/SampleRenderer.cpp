@@ -8,30 +8,15 @@ namespace osc {
   extern "C" char embedded_ptx_code[];
     
 
-  /*! SBT record for a raygen program */
-  struct __align__( OPTIX_SBT_RECORD_ALIGNMENT ) RaygenRecord
-  {
-    __align__( OPTIX_SBT_RECORD_ALIGNMENT ) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    // just a dummy value - later examples will use more interesting
-    // data here
-    void *data;
+  template<typename T>
+  struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) Record {
+      __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+      T data{};
   };
 
-  /*! SBT record for a miss program */
-  struct __align__( OPTIX_SBT_RECORD_ALIGNMENT ) MissRecord
-  {
-    __align__( OPTIX_SBT_RECORD_ALIGNMENT ) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    // just a dummy value - later examples will use more interesting
-    // data here
-    void *data;
-  };
-
-  /*! SBT record for a hitgroup program */
-  struct __align__( OPTIX_SBT_RECORD_ALIGNMENT ) HitgroupRecord
-  {
-    __align__( OPTIX_SBT_RECORD_ALIGNMENT ) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    TriangleMeshSBTData data;
-  };
+  using HitgroupRecord = Record<TriangleMeshSBTData>;
+  using MissRecord = Record<void*>;
+  using RaygenRecord = Record<void*>;
 
 
   /*! constructor - performs all setup, including initializing
@@ -577,6 +562,7 @@ namespace osc {
     // ------------------------------------------------------------------
     int numObjects = (int)model->meshes.size();
     std::vector<HitgroupRecord> hitgroupRecords;
+    std::vector<TriangleMeshSBTData> MaterialRecords;
     for (int meshID=0;meshID<numObjects;meshID++) {
       for (int rayID=0;rayID<RAY_TYPE_COUNT;rayID++) {
         auto mesh = model->meshes[meshID];
@@ -617,9 +603,12 @@ namespace osc {
         rec.data.clearcoat = mesh->clearcoat;
         rec.data.clearcoatGloss = mesh->clearcoatGloss;
         hitgroupRecords.push_back(rec);
+        if (!rayID)MaterialRecords.push_back(rec.data);
       }
     }
     hitgroupRecordsBuffer.alloc_and_upload(hitgroupRecords);
+    MaterialBuffer.alloc_and_upload(MaterialRecords);
+    launchParams.matHeader = (TriangleMeshSBTData*)MaterialBuffer.d_pointer();
     sbt.hitgroupRecordBase          = hitgroupRecordsBuffer.d_pointer();
     sbt.hitgroupRecordStrideInBytes = sizeof(HitgroupRecord);
     sbt.hitgroupRecordCount         = (int)hitgroupRecords.size();
@@ -646,8 +635,8 @@ namespace osc {
         launchParamsBuffer.sizeInBytes,
         &sbt,
         /*! dimensions of the launch: */
-        LightRayGenerateNum,
-        LightRayGenerateNum,
+        LightRayGenerateNum* LightRayGenerateNum,
+        1,
         1
     ));
 

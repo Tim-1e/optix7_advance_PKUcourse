@@ -13,15 +13,15 @@ namespace osc {
     {
         vec3f position;
         vec3f normal;
-        TriangleMeshSBTData mat;
+        TriangleMeshSBTData *mat;
         M_extansion ext;
         int MeshID;//三角形面片id
         float pdf = 0;
 
-        inline __both__ void init(vec3f _position, vec3f _normal, TriangleMeshSBTData _mat, M_extansion _ext,int _MeshID) {
+        inline __both__ void init(vec3f _position, vec3f _normal, int  matID, M_extansion _ext,int _MeshID, TriangleMeshSBTData*matHeader) {
             position=_position; 
             normal = _normal; 
-            mat = _mat; 
+            mat = matHeader +matID;
             ext = _ext;
             MeshID = _MeshID;
         }

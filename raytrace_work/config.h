@@ -7,4 +7,4 @@
 #define Maxdepth 10
 #define M_PIf 3.14159265359
 #define OneLightRayIterNum 1
-#define LightRayGenerateNum 500//这是sqrt值
+#define LightRayGenerateNum 300//这是sqrt值

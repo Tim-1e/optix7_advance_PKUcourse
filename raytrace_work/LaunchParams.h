@@ -56,6 +56,7 @@ namespace osc {
     BDPTVertex* lightPath;
     BDPTVertex* connectPath;
     int* lightPathNum;
+    TriangleMeshSBTData* matHeader;
     OptixTraversableHandle traversable;
   };
   

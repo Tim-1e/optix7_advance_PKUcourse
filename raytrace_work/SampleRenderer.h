@@ -133,6 +133,8 @@ namespace osc {
     /* lights */
     CUDABuffer All_LightBuffer;
 
+    /*Material*/
+    CUDABuffer MaterialBuffer;
     /*path*/
     CUDABuffer  fbeyePath;
     CUDABuffer  fblightPath;

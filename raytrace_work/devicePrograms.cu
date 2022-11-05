@@ -158,7 +158,7 @@ namespace osc
 
         //std::printf("initing prd\n");
         //std::printf("length:%d,depth:%d\n",prd.path->length,prd.depth);
-        prd.path->vertexs[prd.depth].init(surfPos, Ns, *(TriangleMeshSBTData*)optixGetSbtDataPointer(), mext,primID);
+        prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext,primID,optixLaunchParams.matHeader);
         //std::printf("vertexs init finished\n");
         prd.path->length = prd.depth + 1;
         //取出路径顶点
@@ -214,7 +214,6 @@ namespace osc
             light_path.vertexs = optixLaunchParams.lightPath + fbIndex * Maxdepth;
             lightPathNum = optixLaunchParams.lightPathNum + fbIndex;
 
-
             //Begin the light path build
             int num = optixLaunchParams.Lights_num;
             LightParams* Lp = &optixLaunchParams.All_Lights[int(num * prd.random())];
@@ -227,7 +226,7 @@ namespace osc
             mat.ID = Light_point.id;
             mat.emission = Lp->emission;
             M_extansion ext;
-            light_path.vertexs[0].init(Light_point.position, Light_point.normal, mat, ext, Light_point.meshID);
+            light_path.vertexs[0].init(Light_point.position, Light_point.normal, mat.ID, ext, Light_point.meshID,optixLaunchParams.matHeader);
 
             prd.depth = 1;
             prd.path = &light_path;
@@ -352,9 +351,8 @@ namespace osc
             }
 
 
-            //int  light_length_choose = int(prd.random() * light_path.length) + 1;
-            //int  light_length_choose = light_path.length;
-            float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
+
+            //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
             //float pdf = 1.f;
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
             {
@@ -374,7 +372,7 @@ namespace osc
                     vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
                     vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
                     //std::printf("initing connection\n");
-                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat.ID, light_path.vertexs[light_length - 1].MeshID);
+                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
                     //std::printf("tracing\n");
                     packPointer(&dir_hit, u0, u1);
                     optixTrace(optixLaunchParams.traversable,
@@ -393,7 +391,6 @@ namespace osc
                     {
                         Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                         pixelColor += evalPath(connect_path) * length;
-
                     }
                 }
             }
