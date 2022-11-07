@@ -123,9 +123,9 @@ namespace osc
         if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
-        if (dot(Ng, Ns) < 0.f)
-            Ns -= 2.f * dot(Ng, Ns) * Ng;
-        Ns = normalize(Ns);
+        // Use geometric normal to avoid black edge
+        Ns = Ng;
+
 
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
