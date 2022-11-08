@@ -13,6 +13,8 @@
 
 #include <time.h>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 namespace osc {
 
@@ -44,7 +46,7 @@ namespace osc {
     
     virtual void draw() override
     {
-      sample.downloadPixels(pixels.data());
+      sample.downloadPixels(pixels.data(), raw_pixels.data());
 
       if (fbTexture == 0)
         glGenTextures(1, &fbTexture);
@@ -102,9 +104,17 @@ namespace osc {
         for (int i = 0; i < myTime.len; ++i) {
             if (!myTime.timeFlag[i] && deltaTime > myTime.timeStamp[i]) {
                 myTime.timeFlag[i] = true;
-                stbi_write_png(std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]).append(".png").c_str(),
+                std::string file_dir = std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]);
+                std::string file_dir_1 = file_dir;
+                stbi_write_png(file_dir_1.append(".png").c_str(),
                     fbSize.x, fbSize.y, 4, pixels.data(), fbSize.x * sizeof(uint32_t));
                 std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
+                std::ofstream myFile;
+                myFile.open(file_dir.append(".rawFrame"), std::ios::out);
+                for (auto p : raw_pixels) {
+                    myFile << p.x << " " << p.y << " " << p.z << std::endl;
+                }
+                myFile.close();
             }
         }
     }
@@ -114,6 +124,7 @@ namespace osc {
       fbSize = newSize;
       sample.resize(newSize);
       pixels.resize(newSize.x*newSize.y);
+      raw_pixels.resize(newSize.x * newSize.y);
     }
 
     virtual void key(int key, int mods)
@@ -196,6 +207,7 @@ namespace osc {
     GLuint                fbTexture {0};
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
+    std::vector<float4> raw_pixels;
     struct timeStruct
     {
 #define TIME_LEN 9

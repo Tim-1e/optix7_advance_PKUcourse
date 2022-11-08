@@ -36,7 +36,7 @@ namespace osc {
     void resize(const vec2i &newSize);
 
     /*! download the rendered color buffer */
-    void downloadPixels(uint32_t h_pixels[]);
+    void downloadPixels(uint32_t h_pixels[], float4* raw_pixels);
 
     /*! set camera to render with */
     void setCamera(const Camera &camera);
