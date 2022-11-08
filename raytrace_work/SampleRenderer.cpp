@@ -764,6 +764,8 @@ namespace osc {
                  cudaMemcpyDeviceToDevice);
     }
     
+    // tone mapping
+    // Current Method£ºfirst sqrt£¬then clamp to [0, 1] 
     computeFinalPixelColors();
     
     // sync - make sure the frame is rendered before we download and

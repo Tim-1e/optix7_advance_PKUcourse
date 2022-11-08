@@ -32,12 +32,6 @@ namespace osc
     extern "C" __constant__ LaunchParams optixLaunchParams;
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
-    //
-    // Note eventually we will have to create one pair of those for each
-    // ray type and each geometry type we want to render; but this
-    // simple example doesn't use any actual geometries yet, so we only
-    // create a single, dummy, set of them (we do have to have at least
-    // one group of them to set up the SBT)
     //------------------------------------------------------------------------------
 
     extern "C" __global__ void __closesthit__shadow()
@@ -65,22 +59,23 @@ namespace osc
         if (sbtData.emissive_) {
                 int MeshId = sbtData.ID;
                 int PrimId = optixGetPrimitiveIndex();
-                int num = optixLaunchParams.Lights_num;
-                vec3f light_pdf;
+                int lightNum = optixLaunchParams.Lights_num;
+                vec3f lightPdf;
+
                 switch (MY_MODE) {
                 case MY_MIS:
-                    for (int i = 0; i < num; i++)
+                    for (int i = 0; i < lightNum; i++)
                     {
                         if (optixLaunchParams.All_Lights[i].id == MeshId)
                         {
                             LightParams* hit_light = &optixLaunchParams.All_Lights[i];
                             LightSample hit_point;
                             hit_light->sample(hit_point, prd.random, PrimId);
-                            light_pdf = hit_point.Pdf_Light(prd.sourcePos, prd.nextPosition);
+                            lightPdf = hit_point.Pdf_Light(prd.sourcePos, prd.nextPosition);
                             break;
                         }
                     }
-                    prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ light_pdf * num);
+                    prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ lightPdf * lightNum);
                     break;
                 case MY_BRDF:
                     prd.pixelColor = sbtData.emission * prd.throughout/prd.weight;
@@ -89,10 +84,11 @@ namespace osc
                     prd.pixelColor = vec3f(0.f);
                     break;
                 }
-                //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
+
                 prd.end = 1;
                 return;
         }            
+
         prd.throughout /= prd.weight;//非光源，并入即可
 
         // ------------------------------------------------------------------
@@ -125,7 +121,6 @@ namespace osc
 
         // Use geometric normal to avoid black edge
         Ns = Ng;
-
 
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
