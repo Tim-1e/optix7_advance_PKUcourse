@@ -10,4 +10,4 @@
 # define MY_BRDF 0
 # define MY_NEE 1
 # define MY_MIS 2
-# define MY_MODE MY_MIS
+# define MY_MODE MY_BRDF
