@@ -215,9 +215,24 @@ namespace osc {
         std::vector<LightParams> All_Lights;
 
         Model* model = loadOBJ("../../models/sponza2.obj" , All_Lights);
-        Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
+        Camera camera;
+        switch (CAMERA_SET)
+        {
+        case 0:
+        default:
+            camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
             /* at */model->bounds.center() - vec3f(0,400,0),
             /* up */vec3f(0.f,1.f,0.f) };
+            break;
+        case 1:
+             camera = { vec3f(-994.395, 890.632, 161.383),
+                vec3f(42.0908, 398.834, -371.494),
+                vec3f(0.f, 1.f, 0.f)};
+            break;
+        }
+        
+
+
        //Model *model = loadOBJ("../../models/easy.obj", All_Lights); 
        //Camera camera = { /*from*/vec3f(5.3196f,7.24334f,5.39261f),
        //                               /* at */vec3f(-224.429f,-202.79f,-244.616f),
@@ -229,7 +244,7 @@ namespace osc {
       const float worldScale = length(model->bounds.span());
 
       SampleWindow *window = new SampleWindow("BDPT",
-                                              model,camera, All_Lights, worldScale);
+                                              model, camera, All_Lights, worldScale);
       window->enableFlyMode();
       
       std::cout << "Press 'Z' to enable/disable accumulation/progressive refinement" << std::endl;

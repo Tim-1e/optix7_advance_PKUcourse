@@ -35,7 +35,41 @@ namespace osc {
                        clampf(f.z),
                        clampf(f.w));
   }
+
+  inline __device__ float  myClampf(float f) 
+  {
+      float tmp = max(0.f, f);
+      float threshold = 0.92f;
+      if (tmp < threshold)
+          return tmp;
+      return tmp/(tmp + 1 - threshold);
+  }
+  inline __device__ float4 myClamp(float4 f)
+  {
+      return make_float4(myClampf(f.x),
+          myClampf(f.y),
+          myClampf(f.z),
+          myClampf(f.w));
+  }
+
   
+  inline __device__ float ReinhardFun(float f) { return f / (1.f + f); }
+  inline __device__ float4 Reinhard(float4 f)
+  {
+      return make_float4(ReinhardFun(f.x),
+          ReinhardFun(f.y),
+          ReinhardFun(f.z),
+          ReinhardFun(f.w));
+  }
+
+  inline __device__ float4 Gamma(float4 f, float A, float y)
+  {
+      return make_float4(A * powf(f.x, y),
+          A * powf(f.y, y),
+          A * powf(f.z, y),
+          A * powf(f.w, y));
+  }
+
   /*! runs a cuda kernel that performs gamma correction and float4-to-rgba conversion */
   __global__ void computeFinalPixelColorsKernel(uint32_t *finalColorBuffer,
                                                 float4   *denoisedBuffer,
@@ -49,7 +83,8 @@ namespace osc {
     int pixelID = pixelX + size.x*pixelY;
 
     float4 f4 = denoisedBuffer[pixelID];
-    f4 = clamp(sqrt(f4));
+
+    f4 = myClamp(Gamma(f4, 0.95f, 0.60f));
     uint32_t rgba = 0;
     rgba |= (uint32_t)(f4.x * 255.9f) <<  0;
     rgba |= (uint32_t)(f4.y * 255.9f) <<  8;

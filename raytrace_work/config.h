@@ -5,6 +5,8 @@
 # define FIXED_CAMERA 0
 # define VISIBLE_MOUSE 0
 
+# define CAMERA_SET 0
+
 # define MAX_DEPTH 10
 
 # define MY_BRDF 0
