@@ -765,7 +765,7 @@ namespace osc {
     }
     
     // tone mapping
-    // Current Method£ºfirst sqrt£¬then clamp to [0, 1] 
+    // Current Method£ºgamma compression, and personalized clamp
     computeFinalPixelColors();
     
     // sync - make sure the frame is rendered before we download and
