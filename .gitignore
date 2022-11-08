@@ -12,6 +12,7 @@ Session.vim
 *.mp4
 *.pptx
 *.pdf
+/models
 
 # lbx 的部分不上传的文件以 __U___ 开头
 __U___*

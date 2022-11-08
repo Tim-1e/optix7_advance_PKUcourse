@@ -27,7 +27,7 @@ namespace osc {
         sample(model,light)
     {
       sample.setCamera(camera);
-      cameraFrame.motionSpeed=5.0f;
+      cameraFrame.motionSpeed=0.5f;
       startTime = clock();
     }
     
@@ -44,6 +44,11 @@ namespace osc {
     
     virtual void draw() override
     {
+        if (OFFSCREEN) {
+            if (DOWNLOAD) savePicture();
+            else { std::cout << "the program will do nothing" << std::endl; exit(0);}
+            return;
+        }
       sample.downloadPixels(pixels.data());
 
       if (fbTexture == 0)
@@ -96,7 +101,6 @@ namespace osc {
     
     void savePicture() 
     {
-        std::reverse(pixels.begin(), pixels.end());
         int currentTime = clock();
         int deltaTime = currentTime - startTime;
         for (int i = 0; i < myTime.len; ++i) {
@@ -111,6 +115,8 @@ namespace osc {
 
     void _savePicture(std::string fileName)
     {
+        if (OFFSCREEN) sample.downloadPixels(pixels.data()); 
+        std::reverse(pixels.begin(), pixels.end());
         stbi_write_png(fileName.c_str(), fbSize.x, fbSize.y, 4,
             pixels.data(), fbSize.x * sizeof(uint32_t));
     }
@@ -219,21 +225,21 @@ namespace osc {
         // the light 
         std::vector<LightParams> All_Lights;
 
-      Model *model = loadOBJ(
+        Model* model = loadOBJ(
 #ifdef _WIN32
-      // on windows, visual studio creates _two_ levels of build dir
-      // (x86/Release)
-      "../../models/sponza2.obj"
+            // on windows, visual studio creates _two_ levels of build dir
+            // (x86/Release)
+            "../../models/sponza2.obj"
 #else
-      // on linux, common practice is to have ONE level of build dir
-      // (say, <project>/build/)...
-      "../models/sponza2.obj"
+            // on linux, common practice is to have ONE level of build dir
+            // (say, <project>/build/)...
+            "../models/sponza2.obj"
 #endif
-          , All_Lights
-                             ); 
-      Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                                      /* at */model->bounds.center()-vec3f(0,400,0),
-                                      /* up */vec3f(0.f,1.f,0.f) };
+            , All_Lights
+        );
+        Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
+            /* at */model->bounds.center() - vec3f(0,400,0),
+            /* up */vec3f(0.f,1.f,0.f) };
 
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
