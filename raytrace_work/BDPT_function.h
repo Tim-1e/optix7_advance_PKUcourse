@@ -42,14 +42,14 @@ namespace osc {
         }
         vec3f Le = light.mat->emission * lAng;
         throughput *= Le;
-        
+
         //std::printf("color: %f %f %f\n",light.mat->emission.x, light.mat->emission.y, light.mat->emission.z);
 
-        const BDPTVertex& eye = path.vertexs[0];
-        const BDPTVertex& firstHit = path.vertexs[1];
-        vec3f eyeLine = firstHit.position - eye.position;
-        vec3f eyeDirection = normalize(eyeLine);
-        throughput *= dot(eyeDirection, eye.normal);
+        //const BDPTVertex& eye = path.vertexs[0];
+        //const BDPTVertex& firstHit = path.vertexs[1];
+        //vec3f eyeLine = firstHit.position - eye.position;
+        //vec3f eyeDirection = normalize(eyeLine);
+        //throughput *= dot(eyeDirection, eye.normal);
 
         for (int i = 1; i < path.length - 1; i++)
         {
@@ -62,6 +62,45 @@ namespace osc {
         }
         return throughput;
     }
+
+    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path)
+    {
+        const float RR_RATE = 0.8f;
+        vec3f throughput = vec3f(1.0f);
+        const BDPTVertex& light = path.vertexs[path.length - 1];
+        const BDPTVertex& lastMidPoint = path.vertexs[path.length - 2];
+        vec3f lightLine = lastMidPoint.position - light.position;
+        vec3f lightDirection = normalize(lightLine);
+        float lAng = dot(light.normal, lightDirection);
+        if (lAng < 0.0f)
+        {
+            return vec3f(0.0f);
+        }
+        vec3f Le = light.mat->emission * lAng;
+        throughput *= Le;
+
+        //std::printf("color: %f %f %f\n",light.mat->emission.x, light.mat->emission.y, light.mat->emission.z);
+
+        //const BDPTVertex& eye = path.vertexs[0];
+        //const BDPTVertex& firstHit = path.vertexs[1];
+        //vec3f eyeLine = firstHit.position - eye.position;
+        //vec3f eyeDirection = normalize(eyeLine);
+        //throughput *= dot(eyeDirection, eye.normal);
+
+        for (int i = 1; i < path.length - 1; i++)
+        {
+            const BDPTVertex& midPoint = path.vertexs[i];
+            const BDPTVertex& lastPoint = path.vertexs[i - 1];
+            const BDPTVertex& nextPoint = path.vertexs[i + 1];
+            vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
+            vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
+            throughput *= abs(dot(midPoint.normal, nextDirection))
+                * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext)
+                / Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection) / RR_RATE;
+        }
+        return throughput;
+    }
+
     __forceinline__ __device__ float pdfCompute(const BDPTPath& path, int lightPathLength)
     {
         int eyePathLength = path.length - lightPathLength;

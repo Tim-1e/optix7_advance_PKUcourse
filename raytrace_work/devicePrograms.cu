@@ -59,26 +59,6 @@ namespace osc
             prd.end = 1;
             return;
         }
-        if (sbtData.emissive_) {
-            prd.end = 1;
-            if (prd.depth == 1) {
-                vec3f LightColor = 0.f;
-                int MeshId = sbtData.ID;
-                int PrimId = optixGetPrimitiveIndex();
-                int num = optixLaunchParams.Lights_num;
-                for (int i = 0; i < num; i++)
-                {
-                    if (optixLaunchParams.All_Lights[i].id == MeshId)
-                    {
-                        LightColor = optixLaunchParams.All_Lights[i].emission;
-                        break;
-                    }
-                }
-                prd.lightColor = LightColor;
-                prd.TouchtheLight = 1;
-            }
-            return;
-        }
         // ------------------------------------------------------------------
         // gather some basic hit information
         // ------------------------------------------------------------------
@@ -141,18 +121,32 @@ namespace osc
         // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
-        float diffuse_max = max(max(diffuseColor[0], diffuseColor[1]), diffuseColor[2]);
-        
         const float RR = 0.8f;//clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
+
+        M_extansion mext;
+        mext.diffuseColor = diffuseColor;
+        mext.specColor = specColor;//材质属性
+
         if (prd.random() > RR) {
             prd.end = 1;
             return;
         }
+        
+        if (sbtData.emissive_) {
+            prd.end = 1;
+
+            prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
+            //std::printf("vertexs init finished\n");
+            prd.path->length = prd.depth + 1;
+            prd.lightColor = singlePathContriCompute(*prd.path);
+            prd.TouchtheLight = 1;
+
+            return;
+        }
+
+
 
         vec3f mont_dir;//光方向
-        M_extansion mext;
-        mext.diffuseColor = diffuseColor;
-        mext.specColor = specColor;//材质属性
 
         //Pass 将新点加入path
 
