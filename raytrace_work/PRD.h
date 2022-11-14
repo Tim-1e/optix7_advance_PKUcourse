@@ -14,6 +14,8 @@ namespace osc {
         vec3f direction;
         vec3f normal;
         vec3f lightColor;
+        vec3f throughout;
+        vec3f weight;
         BDPTPath* path;
         bool end;
         bool TouchtheLight;
