@@ -138,9 +138,9 @@ namespace osc
             prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
             //std::printf("vertexs init finished\n");
             prd.path->length = prd.depth + 1;
-            //prd.lightColor = prd.throughout * sbtData.emission*abs(dot(Ns,prd.direction));
-            //prd.throughout = sbtData.emission * abs(dot(Ns, prd.direction));
-            prd.lightColor = singlePathContriCompute(*prd.path,0);
+            prd.lightColor = prd.throughout * sbtData.emission*abs(dot(Ns,prd.direction));
+            prd.throughout = sbtData.emission * abs(dot(Ns, prd.direction));
+            //prd.lightColor = singlePathContriCompute(*prd.path,0);
             prd.TouchtheLight = 1;
             return;
         }
@@ -166,8 +166,8 @@ namespace osc
         prd.throughout = prd.throughout * prd.Eval *abs(dot(Ns,mont_dir)) / RR;
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
         prd.throughout /= prd.weight;
-        prd.xx = rayDir;
-        prd.yy = mont_dir;
+        //prd.xx = rayDir;
+        //prd.yy = mont_dir;
         return;
     }
 
@@ -366,7 +366,7 @@ namespace osc
                 pixelColor += prd.lightColor;
                 continue;
             }
-
+            continue;
 
 
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
