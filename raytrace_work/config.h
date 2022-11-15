@@ -6,7 +6,7 @@
 # define DOWNLOAD_DIR "../../output/"
 
 # define GT_ENABLE 1
-# define GT_DIR "../../ground_truth/2400s.rawFrame"
+# define GT_DIR "../../ground_truth/300s.rawFrame"
 
 # define FIXED_CAMERA 1
 # define VISIBLE_MOUSE 1
