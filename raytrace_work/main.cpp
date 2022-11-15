@@ -13,6 +13,8 @@
 
 #include <time.h>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 namespace osc {
 
@@ -28,7 +30,8 @@ namespace osc {
     {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
-      startTime = clock();
+      myTime.startTime = clock();
+      load_GT();
     }
     
     virtual void render() override
@@ -45,6 +48,8 @@ namespace osc {
     virtual void draw() override
     {
       sample.downloadPixels(pixels.data(), raw_pixels.data());
+      float mse = cal_mse();
+      mse_file << mse << std::endl;
 
       if (fbTexture == 0)
         glGenTextures(1, &fbTexture);
@@ -94,27 +99,74 @@ namespace osc {
       if (DOWNLOAD) savePicture();
     }
     
-    void savePicture() 
+    void savePicture()
     {
         std::reverse(pixels.begin(), pixels.end());
         int currentTime = clock();
-        int deltaTime = currentTime - startTime;
+        int deltaTime = currentTime - myTime.startTime;
         for (int i = 0; i < myTime.len; ++i) {
             if (!myTime.timeFlag[i] && deltaTime > myTime.timeStamp[i]) {
                 myTime.timeFlag[i] = true;
-                stbi_write_png(std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]).append(".png").c_str(),
+                std::string file_dir = std::string(DOWNLOAD_DIR).append(myTime.timeStampStr[i]);
+                std::string file_dir_1 = file_dir;
+                stbi_write_png(file_dir_1.append(".png").c_str(),
                     fbSize.x, fbSize.y, 4, pixels.data(), fbSize.x * sizeof(uint32_t));
                 std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
+                if (DOWNLOAD_RAW && i > 4) {
+                    std::cout << "Saving rawFrame..." << std::endl;
+                    std::ofstream myFile;
+                    myFile.open(file_dir.append(".rawFrame"), std::ios::out);
+                    for (auto p : raw_pixels) {
+                        myFile << p.x << " " << p.y << " " << p.z << std::endl;
+                    }
+                    myFile.close();
+                }
             }
         }
     }
 
-    virtual void resize(const vec2i &newSize) 
+    void load_GT() {
+        if (GT_ENABLE) {
+            std::ifstream myFile;
+            myFile.open(GT_DIR, std::ios::in);
+            for (auto p : ground_truth) {
+                myFile >> p.x >> p.y >> p.z;
+            }
+            myFile.close();
+
+            mse_file.open(std::string(DOWNLOAD_DIR).append("mseList"), std::ios::app);
+        }
+    }
+
+    float pow2(float x) { return x * x; }
+
+    float cal_mse() {
+        double sum = 0;
+        if (GT_ENABLE) {
+            int size1 = raw_pixels.size();
+            int size2 = ground_truth.size();
+            if (size1 != size2) {
+                std::cout << GDT_TERMINAL_RED << "FATAL ERROR:  ground truth " << size2
+                    << " and rendered image " << size1 << " don't match size" << GDT_TERMINAL_DEFAULT << std::endl;
+                exit(1);
+            }
+            for (int i = 0; i < size1; ++i) {
+                sum += pow2(raw_pixels[i].x - ground_truth[i].x);
+                sum += pow2(raw_pixels[i].y - ground_truth[i].y);
+                sum += pow2(raw_pixels[i].z - ground_truth[i].z);
+            }
+            sum = sum / (3 * size1);
+        }
+        return float(sum);
+    }
+
+    virtual void resize(const vec2i& newSize)
     {
-      fbSize = newSize;
-      sample.resize(newSize);
-      pixels.resize(newSize.x*newSize.y);
-      raw_pixels.resize(newSize.x * newSize.y);
+        fbSize = newSize;
+        sample.resize(newSize);
+        pixels.resize(newSize.x * newSize.y);
+        raw_pixels.resize(newSize.x * newSize.y);
+        ground_truth.resize(newSize.x * newSize.y);
     }
 
     virtual void key(int key, int mods)
@@ -194,17 +246,21 @@ namespace osc {
     };
 
     vec2i                 fbSize;
-    GLuint                fbTexture {0};
+    GLuint                fbTexture{ 0 };
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
     std::vector<float4> raw_pixels;
-    int startTime;
+    std::vector<float4> ground_truth;
+    std::ofstream mse_file;
+
     struct timeStruct
     {
-        const int len = 7;
-        bool timeFlag[7] = { 0 };
-        std::string timeStampStr[7] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s"};
-        int timeStamp[7] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000 };
+#define TIME_LEN 10
+        int startTime;
+        const int len = TIME_LEN;
+        bool timeFlag[TIME_LEN] = { 0 };
+        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s", "1200s", "2400s", "3600s" };
+        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000, 1200000, 2400000, 3600000 };
     } myTime;
   };
 
@@ -215,10 +271,22 @@ namespace osc {
         // the light 
         std::vector<LightParams> All_Lights;
 
-      Model *model = loadOBJ("../../models/sponza2.obj", All_Lights); 
-      Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                                      /* at */model->bounds.center()-vec3f(0,400,0),
-                                      /* up */vec3f(0.f,1.f,0.f) };
+        Model* model = loadOBJ("../../models/sponza2.obj", All_Lights);
+        Camera camera;
+        switch (CAMERA_SET)
+        {
+        case 0:
+        default:
+            camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
+                /* at */model->bounds.center() - vec3f(0,400,0),
+                /* up */vec3f(0.f,1.f,0.f) };
+            break;
+        case 1:
+            camera = { vec3f(-994.395, 890.632, 161.383),
+               vec3f(42.0908, 398.834, -371.494),
+               vec3f(0.f, 1.f, 0.f) };
+            break;
+        }
 
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:

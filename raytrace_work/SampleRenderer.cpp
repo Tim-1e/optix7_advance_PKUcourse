@@ -870,8 +870,8 @@ namespace osc {
   {
     finalColorBuffer.download(h_pixels,
                               launchParams.frame.size.x*launchParams.frame.size.y);
-    //denoisedBuffer.download(raw_pixels,
-    //    launchParams.frame.size.x * launchParams.frame.size.y);
+    denoisedBuffer.download(raw_pixels,
+        launchParams.frame.size.x * launchParams.frame.size.y);
   }
   
 } // ::osc
