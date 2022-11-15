@@ -44,7 +44,7 @@ namespace osc {
     
     virtual void draw() override
     {
-      sample.downloadPixels(pixels.data());
+      sample.downloadPixels(pixels.data(), raw_pixels.data());
 
       if (fbTexture == 0)
         glGenTextures(1, &fbTexture);
@@ -114,6 +114,7 @@ namespace osc {
       fbSize = newSize;
       sample.resize(newSize);
       pixels.resize(newSize.x*newSize.y);
+      raw_pixels.resize(newSize.x * newSize.y);
     }
 
     virtual void key(int key, int mods)
@@ -196,6 +197,7 @@ namespace osc {
     GLuint                fbTexture {0};
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
+    std::vector<float4> raw_pixels;
     int startTime;
     struct timeStruct
     {
@@ -241,5 +243,4 @@ namespace osc {
     }
     return 0;
   }
-  
 } 

@@ -866,10 +866,12 @@ namespace osc {
   }
   
   /*! download the rendered color buffer */
-  void SampleRenderer::downloadPixels(uint32_t h_pixels[])
+  void SampleRenderer::downloadPixels(uint32_t h_pixels[], float4* raw_pixels)
   {
     finalColorBuffer.download(h_pixels,
                               launchParams.frame.size.x*launchParams.frame.size.y);
+    //denoisedBuffer.download(raw_pixels,
+    //    launchParams.frame.size.x * launchParams.frame.size.y);
   }
   
 } // ::osc

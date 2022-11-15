@@ -119,7 +119,6 @@ namespace osc
         //const float alpha = sbtData.alpha_;
         //const float d = sbtData.d;
 
-
         // ------------------------------------------------------------------
         // compute shadow
         // ------------------------------------------------------------------
@@ -154,7 +153,7 @@ namespace osc
     }
 
     extern "C" __global__ void __anyhit__radiance()
-    { /*! for this simple example, this will remain empty */
+    { /*! for this program, this will remain empty */
     }
 
     extern "C" __global__ void __anyhit__shadow()
