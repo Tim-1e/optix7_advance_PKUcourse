@@ -62,38 +62,6 @@ namespace osc
             prd.end = 1;
             return;
         }
-        if (sbtData.emissive_) {
-                int MeshId = sbtData.ID;
-                int PrimId = optixGetPrimitiveIndex();
-                int num = optixLaunchParams.Lights_num;
-                vec3f light_pdf;
-                switch (MY_MODE) {
-                case MY_MIS:
-                    for (int i = 0; i < num; i++)
-                    {
-                        if (optixLaunchParams.All_Lights[i].id == MeshId)
-                        {
-                            LightParams* hit_light = &optixLaunchParams.All_Lights[i];
-                            LightSample hit_point;
-                            hit_light->sample(hit_point, prd.random, PrimId);
-                            light_pdf = hit_point.Pdf_Light(prd.sourcePos, prd.nextPosition);
-                            break;
-                        }
-                    }
-                    prd.pixelColor = sbtData.emission * prd.throughout/(prd.weight+ light_pdf * num);
-                    break;
-                case MY_BRDF:
-                    prd.pixelColor = sbtData.emission * prd.throughout/prd.weight;
-                    break;
-                case MY_NEE:
-                    prd.pixelColor = vec3f(0.f);
-                    break;
-                }
-                //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
-                prd.end = 1;
-                return;
-        }            
-        prd.throughout /= prd.weight;//非光源，并入即可
 
         // ------------------------------------------------------------------
         // gather some basic hit information
@@ -167,6 +135,41 @@ namespace osc
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
+
+
+        if (sbtData.emissive_) {
+            int MeshId = sbtData.ID;
+            int PrimId = optixGetPrimitiveIndex();
+            int num = optixLaunchParams.Lights_num;
+            vec3f light_pdf;
+            switch (MY_MODE) {
+            case MY_MIS:
+                for (int i = 0; i < num; i++)
+                {
+                    if (optixLaunchParams.All_Lights[i].id == MeshId)
+                    {
+                        LightParams* hit_light = &optixLaunchParams.All_Lights[i];
+                        LightSample hit_point;
+                        hit_light->sample(hit_point, prd.random, PrimId);
+                        light_pdf = hit_point.Pdf_Light(prd.sourcePos, prd.nextPosition);
+                        break;
+                    }
+                }
+                prd.pixelColor = sbtData.emission*abs(dot(Ns,prd.nextPosition)) * prd.throughout / (prd.weight + light_pdf * num);
+                break;
+            case MY_BRDF:
+                prd.pixelColor = sbtData.emission * abs(dot(Ns, prd.nextPosition)) * prd.throughout / prd.weight;
+                break;
+            case MY_NEE:
+                prd.pixelColor = vec3f(0.f);
+                break;
+            }
+            //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
+            prd.end = 1;
+            return;
+        }
+        prd.throughout /= prd.weight;//非光源，并入即可
+
         //直接光
         int lightNum = optixLaunchParams.Lights_num;
         LightParams *LP = &optixLaunchParams.All_Lights[int(lightNum * prd.random())];

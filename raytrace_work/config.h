@@ -1,6 +1,6 @@
 # pragma once
 # define VISUALIZE true
-# define DOWNLOAD 0
+# define DOWNLOAD 1
 # define DOWNLOAD_DIR "../../output/"
 # define FIXED_CAMERA 0
 # define VISIBLE_MOUSE 0
