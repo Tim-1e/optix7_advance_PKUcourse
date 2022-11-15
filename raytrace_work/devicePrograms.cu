@@ -182,9 +182,9 @@ namespace osc
         packPointer(&light_hit, u0, u1);
         vec3f lightDir = normalize(LS.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
-            surfPos + 1e-3f * Ng,
+            surfPos,
             lightDir,
-            0.f,    // tmin
+            1e-5f,    // tmin
             1e20f,  // tmax
             0.0f,   // rayTime
             OptixVisibilityMask(255),
@@ -214,7 +214,7 @@ namespace osc
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
         }
             
-        const float RR = clamp(diffuse_max, 0.3f, 0.9f);//¶íÂÞË¹ÂÖÅÌ¶Ä
+        const float RR = 0.8f;// clamp(diffuse_max, 0.3f, 0.9f);//¶íÂÞË¹ÂÖÅÌ¶Ä
 
         new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
         weight = Eval(sbtData, Ns, rayDir, new_dir, mext);
@@ -225,10 +225,8 @@ namespace osc
 
 
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
-        prd.throughout = min(prd.throughout, vec3f(1e3f));
-        prd.pixelNormal = Ns;
+        prd.pixelNormal = Ng;
         prd.pixelAlbedo = diffuseColor;
-        prd.pixelColor = max(prd.pixelColor,vec3f(0.f));
 
         if (prd.random() > RR) {
             prd.end = 1;
@@ -269,7 +267,6 @@ namespace osc
     //------------------------------------------------------------------------------
     extern "C" __global__ void __raygen__renderFrame()
     {
-        const float color_max_avilable = 1.f;
         const int ix = optixGetLaunchIndex().x;
         const int iy = optixGetLaunchIndex().y;
         const auto &camera = optixLaunchParams.camera;
@@ -328,9 +325,9 @@ namespace osc
             {
                 //¼ä½Ó¹â
                 optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos + 1e-3f * prd.pixelNormal,
+                    prd.sourcePos ,
                     prd.nextPosition,
-                    0.f,    // tmin
+                    1e-5f,    // tmin
                     1e20f,  // tmax
                     0.0f,   // rayTime
                     OptixVisibilityMask(255),
@@ -339,7 +336,7 @@ namespace osc
                     RAY_TYPE_COUNT,               // SBT stride
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
-                    pixelColor += max(prd.pixelColor, vec3f(0.f));
+                    pixelColor += prd.pixelColor;
             }
         }
 
