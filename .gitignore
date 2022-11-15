@@ -4,6 +4,7 @@
 bin
 build
 models
+output
 *.autosave
 *.gz
 *.zip

@@ -84,7 +84,7 @@ namespace osc {
 
     float4 f4 = denoisedBuffer[pixelID];
 
-    f4 = myClamp(Gamma(f4, 0.95f, 0.60f));
+    f4 = clamp(Gamma(f4, 1.0f, 0.50f));
     uint32_t rgba = 0;
     rgba |= (uint32_t)(f4.x * 255.9f) <<  0;
     rgba |= (uint32_t)(f4.y * 255.9f) <<  8;

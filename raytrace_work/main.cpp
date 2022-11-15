@@ -109,12 +109,15 @@ namespace osc {
                 stbi_write_png(file_dir_1.append(".png").c_str(),
                     fbSize.x, fbSize.y, 4, pixels.data(), fbSize.x * sizeof(uint32_t));
                 std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
-                std::ofstream myFile;
-                myFile.open(file_dir.append(".rawFrame"), std::ios::out);
-                for (auto p : raw_pixels) {
-                    myFile << p.x << " " << p.y << " " << p.z << std::endl;
+                if (DOWNLOAD_RAW) {
+                    std::ofstream myFile;
+                    myFile.open(file_dir.append(".rawFrame"), std::ios::out);
+                    for (auto p : raw_pixels) {
+                        myFile << p.x << " " << p.y << " " << p.z << " " << p.w << std::endl;
+                    }
+                    myFile.close();
                 }
-                myFile.close();
+                
             }
         }
     }
