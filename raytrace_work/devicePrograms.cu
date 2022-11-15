@@ -56,6 +56,7 @@ namespace osc
             prd.end = 1;
             return;
         }
+
         if (sbtData.emissive_) {
                 int MeshId = sbtData.ID;
                 int PrimId = optixGetPrimitiveIndex();
@@ -84,7 +85,6 @@ namespace osc
                     prd.pixelColor = vec3f(0.f);
                     break;
                 }
-
                 prd.end = 1;
                 return;
         }            
@@ -143,7 +143,7 @@ namespace osc
             specColor = (vec3f)fromTexture;
         }
 
-        const float alpha = sbtData.alpha_;
+        const float alpha = sbtData.alpha_; // not going to be used
         const float d = sbtData.d;
 
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
@@ -162,6 +162,7 @@ namespace osc
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
+
         //直接光
         int lightNum = optixLaunchParams.Lights_num;
         LightParams *LP = &optixLaunchParams.All_Lights[int(lightNum * prd.random())];
@@ -209,6 +210,7 @@ namespace osc
         const float RR = clamp(diffuse_max, 0.3f, 0.9f);//俄罗斯轮盘赌
 
         new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
+        // weight 是 brdf
         weight = Eval(sbtData, Ns, rayDir, new_dir, mext);
         prd.depth = prd.depth + 1;
         prd.throughout = prd.throughout * weight / RR;
@@ -252,8 +254,7 @@ namespace osc
     }
 
     extern "C" __global__ void __miss__shadow()
-    {
-
+    { /*! not going to be used */
     }
 
     //------------------------------------------------------------------------------
@@ -286,8 +287,7 @@ namespace osc
             // assume that the camera should only(!) cover the denoised
             // screen then the actual screen plane we shuld be using during
             // rendreing is slightly larger than [0,1]^2
-            vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
-                / vec2f(optixLaunchParams.frame.size));
+            vec2f screen(vec2f(ix + prd.random(), iy + prd.random()) / vec2f(optixLaunchParams.frame.size));
  
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
@@ -312,13 +312,13 @@ namespace osc
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            pixelColor += prd.pixelColor;
+            pixelColor += max(prd.pixelColor, vec3f(0.f));
             pixelNormal += prd.pixelNormal;
             pixelAlbedo += prd.pixelAlbedo;
 
             while (!prd.end)
             {
-                //间接光
+                // ray bounce
                 optixTrace(optixLaunchParams.traversable,
                     prd.sourcePos + 1e-3f * prd.pixelNormal,
                     prd.nextPosition,
@@ -327,7 +327,7 @@ namespace osc
                     0.0f,   // rayTime
                     OptixVisibilityMask(255),
                     OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                    RADIANCE_RAY_TYPE,            // SBT offset`
+                    RADIANCE_RAY_TYPE,            // SBT offset
                     RAY_TYPE_COUNT,               // SBT stride
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);

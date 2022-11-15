@@ -31,6 +31,7 @@ namespace osc {
       sample.setCamera(camera);
       cameraFrame.motionSpeed=5.0f;
       myTime.startTime = clock();
+      load_GT();
     }
     
     virtual void render() override
@@ -47,6 +48,8 @@ namespace osc {
     virtual void draw() override
     {
       sample.downloadPixels(pixels.data(), raw_pixels.data());
+      float mse = cal_mse();
+      mse_file << mse << std::endl;
 
       if (fbTexture == 0)
         glGenTextures(1, &fbTexture);
@@ -109,17 +112,52 @@ namespace osc {
                 stbi_write_png(file_dir_1.append(".png").c_str(),
                     fbSize.x, fbSize.y, 4, pixels.data(), fbSize.x * sizeof(uint32_t));
                 std::cout << "Saving picture " << myTime.timeStampStr[i] << std::endl;
-                if (DOWNLOAD_RAW) {
+                if (DOWNLOAD_RAW && i >  4) {
+                    std::cout << "Saving rawFrame..." << std::endl;
                     std::ofstream myFile;
                     myFile.open(file_dir.append(".rawFrame"), std::ios::out);
                     for (auto p : raw_pixels) {
-                        myFile << p.x << " " << p.y << " " << p.z << " " << p.w << std::endl;
+                        myFile << p.x << " " << p.y << " " << p.z << std::endl;
                     }
                     myFile.close();
                 }
-                
             }
         }
+    }
+
+    void load_GT() {
+        if (GT_ENABLE) {
+            std::ifstream myFile;
+            myFile.open(GT_DIR, std::ios::in);
+            for (auto p : ground_truth) {
+                myFile >> p.x >> p.y >> p.z ;
+            }
+            myFile.close();
+
+            mse_file.open(std::string(DOWNLOAD_DIR).append("mseList"), std::ios::app);
+        }
+    }
+
+    float pow2(float x) { return x * x; }
+
+    float cal_mse() {
+        double sum = 0;
+        if (GT_ENABLE) {
+            int size1 = raw_pixels.size();
+            int size2 = ground_truth.size();
+            if (size1 != size2) {
+                std::cout << GDT_TERMINAL_RED << "FATAL ERROR:  ground truth "<< size2
+                    <<" and rendered image "<< size1 <<" don't match size" << GDT_TERMINAL_DEFAULT << std::endl;
+                exit(1);
+            }
+            for (int i = 0; i < size1; ++i) {
+                sum += pow2(raw_pixels[i].x - ground_truth[i].x);
+                sum += pow2(raw_pixels[i].y - ground_truth[i].y);
+                sum += pow2(raw_pixels[i].z - ground_truth[i].z);
+            }
+            sum = sum / (3 * size1);
+        }
+        return float(sum);
     }
 
     virtual void resize(const vec2i &newSize) 
@@ -128,6 +166,7 @@ namespace osc {
       sample.resize(newSize);
       pixels.resize(newSize.x*newSize.y);
       raw_pixels.resize(newSize.x * newSize.y);
+      ground_truth.resize(newSize.x * newSize.y);
     }
 
     virtual void key(int key, int mods)
@@ -211,14 +250,17 @@ namespace osc {
     SampleRenderer        sample;
     std::vector<uint32_t> pixels;
     std::vector<float4> raw_pixels;
+    std::vector<float4> ground_truth;
+    std::ofstream mse_file;
+
     struct timeStruct
     {
-#define TIME_LEN 9
+#define TIME_LEN 10
         int startTime;
         const int len = TIME_LEN;
         bool timeFlag[TIME_LEN] = { 0 };
-        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s", "1200s", "2400s"};
-        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000, 1200000, 2400000 };
+        std::string timeStampStr[TIME_LEN] = { "3s", "10s", "30s", "60s", "180s", "300s", "600s", "1200s", "2400s", "3600s"};
+        int timeStamp[TIME_LEN] = { 3000, 10000, 30000, 60000, 180000, 300000, 600000, 1200000, 2400000, 3600000 };
     } myTime;
   };
 
@@ -246,8 +288,6 @@ namespace osc {
             break;
         }
         
-
-
        //Model *model = loadOBJ("../../models/easy.obj", All_Lights); 
        //Camera camera = { /*from*/vec3f(5.3196f,7.24334f,5.39261f),
        //                               /* at */vec3f(-224.429f,-202.79f,-244.616f),
