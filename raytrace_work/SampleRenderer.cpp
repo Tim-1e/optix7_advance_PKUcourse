@@ -655,6 +655,8 @@ namespace osc {
         1
     ));
 
+    //cudaDeviceSynchronize();
+    //system("pause");
     denoiserIntensity.resize(sizeof(float));
 
     

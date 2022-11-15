@@ -138,10 +138,10 @@ namespace osc
             prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
             //std::printf("vertexs init finished\n");
             prd.path->length = prd.depth + 1;
-            prd.lightColor = prd.throughout * sbtData.emission*abs(dot(Ns,prd.direction));
-            //prd.lightColor = singlePathContriCompute(*prd.path);
+            //prd.lightColor = prd.throughout * sbtData.emission*abs(dot(Ns,prd.direction));
+            //prd.throughout = sbtData.emission * abs(dot(Ns, prd.direction));
+            prd.lightColor = singlePathContriCompute(*prd.path,0);
             prd.TouchtheLight = 1;
-
             return;
         }
 
@@ -162,11 +162,12 @@ namespace osc
         prd.normal = Ng;
         prd.sourcePos = surfPos;
         prd.direction = mont_dir;
-        prd.throughout = prd.throughout * Eval(sbtData, Ns, rayDir, mont_dir, mext)*abs(dot(Ns,mont_dir)) / RR;
+        prd.Eval = Eval(sbtData, Ns, rayDir, mont_dir, mext);
+        prd.throughout = prd.throughout * prd.Eval *abs(dot(Ns,mont_dir)) / RR;
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
         prd.throughout /= prd.weight;
-        prd.throughout = min(prd.throughout, vec3f(1e3f));
-
+        prd.xx = rayDir;
+        prd.yy = mont_dir;
         return;
     }
 
@@ -233,7 +234,7 @@ namespace osc
             prd.end = 0;
             rayDir = Lp->UniformSampleDir(Light_point.position, Light_point.normal, prd.random);
             optixTrace(optixLaunchParams.traversable,
-                Light_point.position+1e-3f*Light_point.normal,
+                Light_point.position+1e-5f*Light_point.normal,
                 rayDir,
                 0.f,    // tmin
                 1e20f,  // tmax
@@ -247,7 +248,7 @@ namespace osc
             while (!prd.end)
             {
                 optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos + 1e-3f * prd.normal,
+                    prd.sourcePos + 1e-5f * prd.normal,
                     prd.direction,
                     0.f,    // tmin
                     1e20f,  // tmax
@@ -306,10 +307,8 @@ namespace osc
             int light_choose = int(prd.random() * LightRayGenerateNum * LightRayGenerateNum);
             light_path.vertexs = optixLaunchParams.lightPath+ light_choose * Maxdepth;
             light_path.length = *(optixLaunchParams.lightPathNum + light_choose);
-            //printf("ptr: %p\n", light_path.vertexs[0].mat);
-            //printf("ptr: %p\n", light_path.vertexs);
-            //printf("color output: %f\n", light_path.vertexs[0].mat->emission.r);
             
+
             //Begin the eye path build
             eye_path.vertexs[0].init(camera.position);
             eye_path.vertexs[0].normal = camera.direction;
@@ -319,6 +318,7 @@ namespace osc
             prd.end = 0;
             prd.TouchtheLight = 0;
             prd.weight = prd.throughout = vec3f(1.f);
+            prd.direction = rayDir;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
                 rayDir,
@@ -333,8 +333,14 @@ namespace osc
                 u0, u1);
             while (!prd.end)
             {
+                //if (ix == 690 && iy == 599) {
+                //    printf("%d has %f %f %f and %f %f %f\n", prd.depth, prd.weight.x, prd.weight.y, prd.weight.z
+                //        , prd.Eval.x, prd.Eval.y, prd.Eval.z);
+                //    printf("mid point has %f %f %f and %f %f %f\n", prd.xx.x, prd.xx.y, prd.xx.z
+                //        , prd.yy.x, prd.yy.y, prd.yy.z);
+                //}
                 optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos + 1e-3f * prd.normal,
+                    prd.sourcePos + 1e-5f * prd.normal,
                     prd.direction,
                     0.f,    // tmin
                     1e20f,  // tmax
@@ -347,10 +353,20 @@ namespace osc
                     u0, u1);
             }
             if (prd.TouchtheLight) {
+                /*if (ix == 690  && iy ==599) {    
+                    printf("light color is %f %f %f\n", prd.throughout.x, prd.throughout.y, prd.throughout.z);
+                    printf("we get touch with %f %f %f\n", prd.lightColor.x, prd.lightColor.y, prd.lightColor.z);
+                    vec3f color=singlePathContriCompute(*prd.path,1);
+                    printf("we count %f %f %f\n", color.x, color.y, color.z);
+                }*/
+
+                //vec3f color = singlePathContriCompute(*prd.path,0);
+                // if (abs((color.x- prd.lightColor.x)/color.x)>0.5) printf("%d,%d\n", ix, iy);
+                
                 pixelColor += prd.lightColor;
                 continue;
             }
-            continue;
+
 
 
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
@@ -377,7 +393,7 @@ namespace osc
                     //std::printf("tracing\n");
                     packPointer(&dir_hit, u0, u1);
                     optixTrace(optixLaunchParams.traversable,
-                        eyeLastPoint + 1e-3f * Ng,
+                        eyeLastPoint + 1e-5f * Ng,
                         lightDir,
                         0.f,    // tmin
                         1e20f,  // tmax

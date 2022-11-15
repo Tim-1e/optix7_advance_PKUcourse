@@ -63,7 +63,7 @@ namespace osc {
         return throughput;
     }
 
-    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path)
+    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path,bool test)
     {
         const float RR_RATE = 0.8f;
         vec3f throughput = vec3f(1.0f);
@@ -77,15 +77,8 @@ namespace osc {
             return vec3f(0.0f);
         }
         vec3f Le = light.mat->emission * lAng;
+        if (test) printf("light color is %f %f %f\n", Le.x, Le.y, Le.z);
         throughput *= Le;
-
-        //std::printf("color: %f %f %f\n",light.mat->emission.x, light.mat->emission.y, light.mat->emission.z);
-
-        //const BDPTVertex& eye = path.vertexs[0];
-        //const BDPTVertex& firstHit = path.vertexs[1];
-        //vec3f eyeLine = firstHit.position - eye.position;
-        //vec3f eyeDirection = normalize(eyeLine);
-        //throughput *= dot(eyeDirection, eye.normal);
 
         for (int i = 1; i < path.length - 1; i++)
         {
@@ -94,9 +87,18 @@ namespace osc {
             const BDPTVertex& nextPoint = path.vertexs[i + 1];
             vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
             vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
+            vec3f EVAL, BRDF;
+            EVAL = Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
+            BRDF = Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
+            if (test) printf("%d has %f %f %f and %f %f %f\n", i, BRDF.x, BRDF.y, BRDF.z
+                , EVAL.x, EVAL.y, EVAL.z);
+            vec3f xx = -lastDirection;
+            vec3f yy = nextDirection;
+            if (test) printf("mid point has %f %f %f and %f %f %f\n", xx.x, xx.y, xx.z
+                , yy.x, yy.y, yy.z);
             throughput *= abs(dot(midPoint.normal, nextDirection))
-                * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext)
-                / Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection) / RR_RATE;
+                * EVAL
+                /BRDF / RR_RATE;
         }
         return throughput;
     }
