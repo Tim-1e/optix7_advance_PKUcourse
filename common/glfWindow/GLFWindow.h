@@ -268,7 +268,6 @@ namespace osc {
                     const vec3f &camera_at,
                     const vec3f &camera_up,
                     const float worldScale,
-                    const bool fixed_camera,
                     const bool visible_mouse)
       : GLFWindow(title),
         cameraFrame(worldScale)
@@ -276,7 +275,6 @@ namespace osc {
       cameraFrame.setOrientation(camera_from,camera_at,camera_up);
       enableFlyMode();
       enableInspectMode();
-      fixedCamera = fixed_camera;
       if( !visible_mouse )
           glfwSetInputMode(handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
