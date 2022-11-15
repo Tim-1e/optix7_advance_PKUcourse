@@ -234,9 +234,9 @@ namespace osc
             prd.end = 0;
             rayDir = Lp->UniformSampleDir(Light_point.position, Light_point.normal, prd.random);
             optixTrace(optixLaunchParams.traversable,
-                Light_point.position+1e-5f*Light_point.normal,
+                Light_point.position,
                 rayDir,
-                0.f,    // tmin
+                1e-5f,    // tmin
                 1e20f,  // tmax
                 0.0f,   // rayTime
                 OptixVisibilityMask(255),
@@ -248,9 +248,9 @@ namespace osc
             while (!prd.end)
             {
                 optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos + 1e-5f * prd.normal,
+                    prd.sourcePos ,
                     prd.direction,
-                    0.f,    // tmin
+                    1e-5f,    // tmin
                     1e20f,  // tmax
                     0.0f,   // rayTime
                     OptixVisibilityMask(255),
@@ -340,9 +340,9 @@ namespace osc
                 //        , prd.yy.x, prd.yy.y, prd.yy.z);
                 //}
                 optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos + 1e-5f * prd.normal,
+                    prd.sourcePos ,
                     prd.direction,
-                    0.f,    // tmin
+                    1e-5f,    // tmin
                     1e20f,  // tmax
                     0.0f,   // rayTime
                     OptixVisibilityMask(255),
@@ -385,7 +385,6 @@ namespace osc
                     //¿É¼ûÐÔÅÐ¶Ï
                     //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
                     vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
-                    vec3f Ng = eye_path.vertexs[eye_length - 1].normal;
                     vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
                     vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
                     //std::printf("initing connection\n");
@@ -393,9 +392,9 @@ namespace osc
                     //std::printf("tracing\n");
                     packPointer(&dir_hit, u0, u1);
                     optixTrace(optixLaunchParams.traversable,
-                        eyeLastPoint + 1e-5f * Ng,
+                        eyeLastPoint ,
                         lightDir,
-                        0.f,    // tmin
+                        1e-5f,    // tmin
                         1e20f,  // tmax
                         0.0f,   // rayTime
                         OptixVisibilityMask(255),
