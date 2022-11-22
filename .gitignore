@@ -13,6 +13,8 @@ Session.vim
 *.mp4
 *.pptx
 *.pdf
+/output
+/models
 
 git_token.txt
 
