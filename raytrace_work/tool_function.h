@@ -183,14 +183,16 @@
 
         if (probability < diffuseRatio) // sample diffuse
         {
+            // 半球空间cos重要性采样
             dir = AxisAngle(N, r1, r2 * 2 * M_PI);
         }
-        else
+        else // sample spec
         {
+            // roughness 是镜面反射的 glossy 程度
             float a = max(0.001f, mat.roughness);
-            float phi = r1 * 2.0f * M_PI;
-            float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-            vec3f half = AxisAngle(N,  cosTheta * cosTheta, phi);
+            float cos2Theta = (1.0f - r2) / (1.0f + (a * a - 1.0f) * r2);
+            // half 是微表面的法向
+            vec3f half = AxisAngle(N,  cos2Theta, r1 * 2.0f * M_PI);
             dir = 2.0f * dot(V, half) * half - V; //reflection vector
         }
         return dir;

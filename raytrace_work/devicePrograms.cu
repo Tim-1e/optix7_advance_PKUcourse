@@ -32,12 +32,6 @@ namespace osc
     extern "C" __constant__ LaunchParams optixLaunchParams;
     //------------------------------------------------------------------------------
     // closest hit and anyhit programs for radiance-type rays.
-    //
-    // Note eventually we will have to create one pair of those for each
-    // ray type and each geometry type we want to render; but this
-    // simple example doesn't use any actual geometries yet, so we only
-    // create a single, dummy, set of them (we do have to have at least
-    // one group of them to set up the SBT)
     //------------------------------------------------------------------------------
 
     extern "C" __global__ void __closesthit__shadow()
@@ -90,9 +84,8 @@ namespace osc
         if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
-        if (dot(Ng, Ns) < 0.f)
-            Ns -= 2.f * dot(Ng, Ns) * Ng;
-        Ns = normalize(Ns);
+        // Use geometric normal to avoid black edge
+        Ns = Ng;
 
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
@@ -115,7 +108,7 @@ namespace osc
             specColor = (vec3f)fromTexture;
         }
 
-        const float alpha = sbtData.alpha_;
+        const float alpha = sbtData.alpha_; // not going to be used
         const float d = sbtData.d;
 
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
@@ -220,6 +213,7 @@ namespace osc
         const float RR = 0.8f;// clamp(diffuse_max, 0.3f, 0.9f);//俄罗斯轮盘赌
 
         new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
+        // weight 是 brdf
         weight = Eval(sbtData, Ns, rayDir, new_dir, mext);
         prd.depth = prd.depth + 1;
         prd.throughout = prd.throughout * weight / RR;
@@ -261,8 +255,7 @@ namespace osc
     }
 
     extern "C" __global__ void __miss__shadow()
-    {
-
+    { /*! not going to be used */
     }
 
     //------------------------------------------------------------------------------
@@ -294,8 +287,7 @@ namespace osc
             // assume that the camera should only(!) cover the denoised
             // screen then the actual screen plane we shuld be using during
             // rendreing is slightly larger than [0,1]^2
-            vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
-                / vec2f(optixLaunchParams.frame.size));
+            vec2f screen(vec2f(ix + prd.random(), iy + prd.random()) / vec2f(optixLaunchParams.frame.size));
  
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
@@ -326,7 +318,7 @@ namespace osc
 
             while (!prd.end)
             {
-                //间接光
+                // ray bounce
                 optixTrace(optixLaunchParams.traversable,
                     prd.sourcePos ,
                     prd.nextPosition,
@@ -335,7 +327,7 @@ namespace osc
                     0.0f,   // rayTime
                     OptixVisibilityMask(255),
                     OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                    RADIANCE_RAY_TYPE,            // SBT offset`
+                    RADIANCE_RAY_TYPE,            // SBT offset
                     RAY_TYPE_COUNT,               // SBT stride
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);

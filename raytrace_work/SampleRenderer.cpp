@@ -635,6 +635,7 @@ namespace osc {
                             1
                             ));
 
+
     denoiserIntensity.resize(sizeof(float));
 
     
@@ -763,7 +764,9 @@ namespace osc {
                  outputLayer.width*outputLayer.height*sizeof(float4),
                  cudaMemcpyDeviceToDevice);
     }
-    
+
+    // tone mapping
+    // Current Method£ºgamma compression, and personalized clamp
     computeFinalPixelColors();
     
     // sync - make sure the frame is rendered before we download and
@@ -858,10 +861,13 @@ namespace osc {
   }
   
   /*! download the rendered color buffer */
-  void SampleRenderer::downloadPixels(uint32_t h_pixels[])
+  void SampleRenderer::downloadPixels(uint32_t h_pixels[], float4* raw_pixels)
   {
     finalColorBuffer.download(h_pixels,
                               launchParams.frame.size.x*launchParams.frame.size.y);
+    denoisedBuffer.download(raw_pixels,
+        launchParams.frame.size.x * launchParams.frame.size.y);
+
   }
   
 } // ::osc
