@@ -161,7 +161,10 @@ namespace osc
                 prd.pixelColor = sbtData.emission * abs(dot(Ns, prd.nextPosition)) * prd.throughout / prd.weight;
                 break;
             case MY_NEE:
-                prd.pixelColor = vec3f(0.f);
+                if (prd.depth > 0)
+                    prd.pixelColor = vec3f(0.f);
+                else
+                    prd.pixelColor = sbtData.emission * abs(dot(Ns, prd.nextPosition));
                 break;
             }
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
