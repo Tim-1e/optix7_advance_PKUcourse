@@ -277,7 +277,6 @@ namespace osc {
       cameraFrame.setOrientation(camera_from,camera_at,camera_up);
       enableFlyMode();
       enableInspectMode();
-      fixedCamera = fixed_camera;
       if( !visible_mouse )
           glfwSetInputMode(handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
