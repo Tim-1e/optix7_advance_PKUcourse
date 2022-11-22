@@ -31,7 +31,7 @@ namespace osc {
     glfwTerminate();
   }
 
-  GLFWindow::GLFWindow(const std::string &title)
+  GLFWindow::GLFWindow(const std::string &title,const vec2i windowsScale)
   {
     glfwSetErrorCallback(glfw_error_callback);
     // glfwInitHint(GLFW_COCOA_MENUBAR, GLFW_FALSE);
@@ -42,8 +42,8 @@ namespace osc {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-      
-    handle = glfwCreateWindow(1200, 800, title.c_str(), NULL, NULL);
+    
+    handle = glfwCreateWindow(windowsScale.x, windowsScale.y, title.c_str(), NULL, NULL);
     if (!handle) {
       glfwTerminate();
       exit(EXIT_FAILURE);
@@ -94,9 +94,9 @@ namespace osc {
   
   void GLFWindow::run()
   {
-    int width, height;
-    glfwGetFramebufferSize(handle, &width, &height);
-    resize(vec2i(width,height));
+    vec2i Scale;
+    glfwGetFramebufferSize(handle, &Scale.x, &Scale.y);
+    resize(Scale);
 
     // glfwSetWindowUserPointer(window, GLFWindow::current);
     glfwSetFramebufferSizeCallback(handle, glfwindow_reshape_cb);

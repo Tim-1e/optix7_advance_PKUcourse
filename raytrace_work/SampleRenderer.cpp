@@ -813,6 +813,7 @@ namespace osc {
   /*! resize frame buffer to given resolution */
   void SampleRenderer::resize(const vec2i &newSize)
   {
+      printf("\n\033[1;33m create Frame with Scale [%d ,%d] \033[0m \n", newSize.x, newSize.y);
     if (denoiser) {
       OPTIX_CHECK(optixDenoiserDestroy(denoiser));
     };

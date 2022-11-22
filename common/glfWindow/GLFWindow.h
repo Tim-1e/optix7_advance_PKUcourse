@@ -11,7 +11,7 @@ namespace osc {
 
 
   struct GLFWindow {
-    GLFWindow(const std::string &title);
+    GLFWindow(const std::string &title,const vec2i windowsScale);
     ~GLFWindow();
 
     /*! put pixels on the screen ... */
@@ -268,9 +268,10 @@ namespace osc {
                     const vec3f &camera_at,
                     const vec3f &camera_up,
                     const float worldScale,
+                    const vec2i windowsScale,
                     const bool fixed_camera,
                     const bool visible_mouse)
-      : GLFWindow(title),
+      : GLFWindow(title, windowsScale),
         cameraFrame(worldScale)
     {
       cameraFrame.setOrientation(camera_from,camera_at,camera_up);

@@ -23,7 +23,7 @@ namespace osc {
                  const Camera &camera,
                  const  std::vector<LightParams> light,
                  const float worldScale)
-      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale, FIXED_CAMERA, VISIBLE_MOUSE),
+      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale,WindowsScale, FIXED_CAMERA, VISIBLE_MOUSE),
         sample(model,light)
     {
       sample.setCamera(camera);
