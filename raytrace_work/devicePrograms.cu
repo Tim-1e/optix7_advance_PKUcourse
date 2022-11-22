@@ -202,7 +202,7 @@ namespace osc
             weight *= lightNum;
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * LS.emission ;
-            float Pdf_nee = LS.pdf * dis * dis / dot(LS.normal, -lightDir);
+            float Pdf_nee = LS.pdf * dis * dis / abs(dot(LS.normal, -lightDir));
             switch (MY_MODE)
             {
             case MY_BRDF:
@@ -230,7 +230,7 @@ namespace osc
         prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
         prd.pixelNormal = Ng;
         prd.pixelAlbedo = diffuseColor;
-
+        prd.pixelColor = max(prd.pixelColor, vec3f(0.f));
         if (prd.random() > RR) {
             prd.end = 1;
             return;
