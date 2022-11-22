@@ -75,7 +75,6 @@ namespace osc
         vec3f Ns = (sbtData.normal)
                        ? ((1.f - u - v) * sbtData.normal[index.x] + u * sbtData.normal[index.y] + v * sbtData.normal[index.z])
                        : Ng;
-
         // ------------------------------------------------------------------
         // face-forward and normalize normals
         // ------------------------------------------------------------------
@@ -84,8 +83,12 @@ namespace osc
         if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
-        // Use geometric normal to avoid black edge
-        Ns = Ng;
+        //if (dot(Ng, Ns) < 0.f)
+        //    Ns -= 2.f * dot(Ng, Ns) * Ng;
+        //Ns = normalize(Ns);
+
+        //// Use geometric normal to avoid black edge
+        //Ns = Ng;
 
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
@@ -130,6 +133,13 @@ namespace osc
 
 
         if (sbtData.emissive_) {
+           
+            if (dot(Ns, -prd.nextPosition)<0) {
+                prd.pixelColor = vec3f(0.f);
+                prd.end = 1;
+                return;
+            }
+            //if (prd.depth == 0) printf("%f %f %f and %f %f %f\n", Ns.x, Ns.y, Ns.z, prd.nextPosition.x, prd.nextPosition.y, prd.nextPosition.z);
             int MeshId = sbtData.ID;
             int PrimId = optixGetPrimitiveIndex();
             int num = optixLaunchParams.Lights_num;
@@ -147,16 +157,16 @@ namespace osc
                         break;
                     }
                 }
-                prd.pixelColor = sbtData.emission*abs(dot(Ns,prd.nextPosition)) * prd.throughout / (prd.weight + light_pdf * num);
+                prd.pixelColor = sbtData.emission*dot(Ns,-prd.nextPosition) * prd.throughout / (prd.weight + light_pdf * num);
                 break;
             case MY_BRDF:
-                prd.pixelColor = sbtData.emission * abs(dot(Ns, prd.nextPosition)) * prd.throughout / prd.weight;
+                prd.pixelColor = sbtData.emission *dot(Ns, -prd.nextPosition) * prd.throughout / prd.weight;
                 break;
             case MY_NEE:
                 if (prd.depth > 0)
                     prd.pixelColor = vec3f(0.f);
                 else
-                    prd.pixelColor = sbtData.emission * abs(dot(Ns, prd.nextPosition));
+                    prd.pixelColor = sbtData.emission *dot(Ns, -prd.nextPosition);
                 break;
             }
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
@@ -190,12 +200,12 @@ namespace osc
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
 
-        if (dir_hit.x == -1) {
+        if (dir_hit.x == -1 && dot(LS.normal, -lightDir)>0) {
             float dis = length(LS.position - surfPos);
             weight *= lightNum;
-            weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);
+            weight *= Eval(sbtData, Ng, rayDir, lightDir, mext);
             vec3f Dir_color_contri = prd.throughout * weight  * LS.emission ;
-            float Pdf_nee = LS.pdf * dis * dis / abs(dot(LS.normal, -lightDir));
+            float Pdf_nee = LS.pdf * dis * dis / dot(LS.normal, -lightDir);
             switch (MY_MODE)
             {
             case MY_BRDF:
@@ -204,7 +214,7 @@ namespace osc
                 prd.pixelColor = Dir_color_contri / (Pdf_nee);
                 break;
             case MY_MIS:
-                prd.pixelColor = Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ns, rayDir, lightDir));
+                prd.pixelColor = Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ng, rayDir, lightDir));
                 break;
             }
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
@@ -212,16 +222,16 @@ namespace osc
             
         const float RR = 0.8f;// clamp(diffuse_max, 0.3f, 0.9f);//¶íÂÞË¹ÂÖÅÌ¶Ä
 
-        new_dir = SampleNewRay(sbtData, Ns, rayDir, prd);
+        new_dir = SampleNewRay(sbtData, Ng, rayDir, prd);
         // weight ÊÇ brdf
-        weight = Eval(sbtData, Ns, rayDir, new_dir, mext);
+        weight = Eval(sbtData, Ng, rayDir, new_dir, mext);
         prd.depth = prd.depth + 1;
         prd.throughout = prd.throughout * weight / RR;
         prd.sourcePos = surfPos;
         prd.nextPosition = new_dir;
 
 
-        prd.weight = Pdf_brdf(sbtData, Ns, rayDir, new_dir);
+        prd.weight = Pdf_brdf(sbtData, Ng, rayDir, new_dir);
         prd.pixelNormal = Ng;
         prd.pixelAlbedo = diffuseColor;
         prd.pixelColor = max(prd.pixelColor, vec3f(0.f));
@@ -298,6 +308,7 @@ namespace osc
             prd.depth = 0;
             prd.throughout = vec3f(1.f);
             prd.sourcePos = camera.position;
+            prd.nextPosition = rayDir;
             prd.weight = vec3f(1.f);
             prd.end = 0;
             optixTrace(optixLaunchParams.traversable,
