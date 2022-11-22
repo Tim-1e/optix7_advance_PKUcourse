@@ -44,10 +44,9 @@ namespace osc
     {
         const TriangleMeshSBTData& sbtData
             = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
-        int& light_hit = *getPRD<int>();
-
-        if (light_hit == sbtData.ID) {
-            light_hit = -1;
+        vec2i& dir_hit = *getPRD<vec2i>();
+        if (dir_hit.x == sbtData.ID && dir_hit.y == optixGetPrimitiveIndex()) {
+            dir_hit.x = -1;
         }
     }
 
@@ -177,12 +176,13 @@ namespace osc
         int lightNum = optixLaunchParams.Lights_num;
         LightParams *LP = &optixLaunchParams.All_Lights[int(lightNum * prd.random())];
         LightSample LS;
+        int lightMeshID= LP->num * prd.random();
+        LP->sample(LS, prd.random, lightMeshID);
 
-        LP->sample(LS, prd.random,int(LP->num*prd.random()));
+        vec2i dir_hit = vec2i(LP->id, lightMeshID);
+        //std::printf("tracing\n");
+        packPointer(&dir_hit, u0, u1);
 
-        int light_hit = LP->id;
-
-        packPointer(&light_hit, u0, u1);
         vec3f lightDir = normalize(LS.position - surfPos);
         optixTrace(optixLaunchParams.traversable,
             surfPos,
@@ -197,7 +197,7 @@ namespace osc
             SHADOW_RAY_TYPE,            // missSBTIndex 
             u0, u1);
 
-        if (light_hit == -1) {
+        if (dir_hit.x == -1) {
             float dis = length(LS.position - surfPos);
             weight *= lightNum;
             weight *= Eval(sbtData, Ns, rayDir, lightDir, mext);

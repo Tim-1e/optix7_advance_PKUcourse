@@ -215,7 +215,7 @@ namespace osc {
         std::vector<LightParams> All_Lights;
 
         Model* model = loadOBJ(
-            "../../models/threemirror.obj", All_Lights
+            "../../models/fourmirror.obj", All_Lights
         );
         Camera camera = { /*from*/vec3f(7.55735,11.741,-6.49642),
             /* at */vec3f(-163.544,-301.196,172.938),
