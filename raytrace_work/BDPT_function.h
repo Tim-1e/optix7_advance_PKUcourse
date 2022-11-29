@@ -63,7 +63,7 @@ namespace osc {
         return throughput;
     }
 
-    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path,bool test)
+    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path)
     {
         const float RR_RATE = 0.8f;
         vec3f throughput = vec3f(1.0f);
@@ -76,8 +76,7 @@ namespace osc {
         {
             return vec3f(0.0f);
         }
-        vec3f Le = light.mat->emission * lAng;
-        if (test) printf("light color is %f %f %f\n", Le.x, Le.y, Le.z);
+        vec3f Le = light.mat->emission;
         throughput *= Le;
 
         for (int i = 1; i < path.length - 1; i++)
@@ -90,12 +89,8 @@ namespace osc {
             vec3f EVAL, BRDF;
             EVAL = Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext);
             BRDF = Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection);
-            if (test) printf("%d has %f %f %f and %f %f %f\n", i, BRDF.x, BRDF.y, BRDF.z
-                , EVAL.x, EVAL.y, EVAL.z);
             vec3f xx = -lastDirection;
             vec3f yy = nextDirection;
-            if (test) printf("mid point has %f %f %f and %f %f %f\n", xx.x, xx.y, xx.z
-                , yy.x, yy.y, yy.z);
             throughput *= abs(dot(midPoint.normal, nextDirection))
                 * EVAL
                 /BRDF / RR_RATE;

@@ -87,10 +87,6 @@ namespace osc
         if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
-        if (dot(Ng, Ns) < 0.f)
-            Ns -= 2.f * dot(Ng, Ns) * Ng;
-        Ns = normalize(Ns);
-        Ns = Ng;// use geomatics normal
         // ------------------------------------------------------------------
         // compute diffuse material color, including diffuse texture, if
         // available
@@ -115,13 +111,12 @@ namespace osc
         //const float alpha = sbtData.alpha_;
         //const float d = sbtData.d;
 
-
         // ------------------------------------------------------------------
         // compute shadow
         // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
-        const float RR = 0.8f;//clamp(diffuse_max,0.3f,0.9f);//俄罗斯轮盘赌
+        const float RR = 0.8f;//俄罗斯轮盘赌
 
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
@@ -134,40 +129,28 @@ namespace osc
         
         if (sbtData.emissive_) {
             prd.end = 1;
-
-            prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
-            //std::printf("vertexs init finished\n");
+            if (dot(Ns, -prd.direction) < 0) {
+                prd.lightColor = vec3f(0.f);
+                return;
+            }
+            prd.path->vertexs[prd.depth].init(surfPos, Ng, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
             prd.path->length = prd.depth + 1;
-            prd.lightColor = prd.throughout * sbtData.emission*abs(dot(Ns,prd.direction));
-            prd.throughout = sbtData.emission * abs(dot(Ns, prd.direction));
-            //prd.lightColor = singlePathContriCompute(*prd.path,0);
+            prd.lightColor = singlePathContriCompute(*prd.path);
             prd.TouchtheLight = 1;
             return;
         }
 
-
-
         vec3f mont_dir;//光方向
 
         //Pass 将新点加入path
-
-        //std::printf("initing prd\n");
-        //std::printf("length:%d,depth:%d\n",prd.path->length,prd.depth);
-        prd.path->vertexs[prd.depth].init(surfPos, Ns, sbtData.ID, mext,primID,optixLaunchParams.matHeader);
-        //std::printf("vertexs init finished\n");
+        prd.path->vertexs[prd.depth].init(surfPos, Ng, sbtData.ID, mext,primID,optixLaunchParams.matHeader);
         prd.path->length = prd.depth + 1;
         //取出路径顶点
-        mont_dir = Sample_adjust(sbtData, Ns, rayDir,prd);
+        mont_dir = Sample_adjust(sbtData, Ng, rayDir,prd);
         prd.depth = prd.depth + 1;
         prd.normal = Ng;
         prd.sourcePos = surfPos;
         prd.direction = mont_dir;
-        prd.Eval = Eval(sbtData, Ns, rayDir, mont_dir, mext);
-        prd.throughout = prd.throughout * prd.Eval *abs(dot(Ns,mont_dir)) / RR;
-        prd.weight = Pdf_brdf(sbtData, Ns, rayDir, mont_dir);
-        prd.throughout /= prd.weight;
-        //prd.xx = rayDir;
-        //prd.yy = mont_dir;
         return;
     }
 
@@ -205,7 +188,6 @@ namespace osc
             PRD prd;
             prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
                 optixLaunchParams.frame.frameID);
-            // the values we store the PRD pointer in:
             uint32_t u0, u1;
             packPointer(&prd, u0, u1);
 
@@ -261,8 +243,6 @@ namespace osc
                     u0, u1);
             }
             *lightPathNum = light_path.length;
-            //printf("ptr: %p\n", light_path.vertexs[0].mat);
-            //printf("color: %f\n", light_path.vertexs[0].mat->emission.z);
     }
 
     //------------------------------------------------------------------------------
@@ -282,9 +262,8 @@ namespace osc
         for (int sampleID = 0; sampleID < numPixelSamples; sampleID++)
         {
             PRD prd;
-            prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
+            prd.random.init(ix + optixLaunchParams.frame.size.x * iy+ sampleID,
                 optixLaunchParams.frame.frameID);
-            // the values we store the PRD pointer in:
             uint32_t u0, u1;
             packPointer(&prd, u0, u1);
 
@@ -296,7 +275,6 @@ namespace osc
             for (int i = 0; i < LightRayGenerateNum * LightRayGenerateNum; i++)
             {
                 LightVertexNum += optixLaunchParams.lightPathNum[i];
-                //if (!ix && !iy) printf("light %d has %d\n", i, optixLaunchParams.lightPathNum[i]);
             }
 
             // generate ray direction
@@ -317,7 +295,6 @@ namespace osc
             prd.path = &eye_path;
             prd.end = 0;
             prd.TouchtheLight = 0;
-            prd.weight = prd.throughout = vec3f(1.f);
             prd.direction = rayDir;
             optixTrace(optixLaunchParams.traversable,
                 camera.position,
@@ -333,12 +310,6 @@ namespace osc
                 u0, u1);
             while (!prd.end)
             {
-                //if (ix == 690 && iy == 599) {
-                //    printf("%d has %f %f %f and %f %f %f\n", prd.depth, prd.weight.x, prd.weight.y, prd.weight.z
-                //        , prd.Eval.x, prd.Eval.y, prd.Eval.z);
-                //    printf("mid point has %f %f %f and %f %f %f\n", prd.xx.x, prd.xx.y, prd.xx.z
-                //        , prd.yy.x, prd.yy.y, prd.yy.z);
-                //}
                 optixTrace(optixLaunchParams.traversable,
                     prd.sourcePos ,
                     prd.direction,
@@ -353,16 +324,6 @@ namespace osc
                     u0, u1);
             }
             if (prd.TouchtheLight) {
-                /*if (ix == 690  && iy ==599) {    
-                    printf("light color is %f %f %f\n", prd.throughout.x, prd.throughout.y, prd.throughout.z);
-                    printf("we get touch with %f %f %f\n", prd.lightColor.x, prd.lightColor.y, prd.lightColor.z);
-                    vec3f color=singlePathContriCompute(*prd.path,1);
-                    printf("we count %f %f %f\n", color.x, color.y, color.z);
-                }*/
-
-                //vec3f color = singlePathContriCompute(*prd.path,0);
-                // if (abs((color.x- prd.lightColor.x)/color.x)>0.5) printf("%d,%d\n", ix, iy);
-                
                 pixelColor += prd.lightColor;
                 continue;
             }
