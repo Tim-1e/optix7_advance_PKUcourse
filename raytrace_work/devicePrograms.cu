@@ -323,11 +323,11 @@ namespace osc
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
             }
-            if (prd.TouchtheLight) {
-                pixelColor += prd.lightColor;
-                continue;
-            }
-            continue;
+            //if (prd.TouchtheLight) {
+            //    pixelColor += prd.lightColor;
+            //    continue;
+            //}
+            //continue;
 
 
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
