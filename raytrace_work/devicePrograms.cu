@@ -140,12 +140,17 @@ namespace osc
                 return;
             }
             //if (prd.depth == 0) printf("%f %f %f and %f %f %f\n", Ns.x, Ns.y, Ns.z, prd.nextPosition.x, prd.nextPosition.y, prd.nextPosition.z);
+        
             int MeshId = sbtData.ID;
             int PrimId = optixGetPrimitiveIndex();
             int num = optixLaunchParams.Lights_num;
             vec3f light_pdf;
             switch (MY_MODE) {
             case MY_MIS:
+                if (prd.depth == 0) {
+                    prd.pixelColor = sbtData.emission;
+                    break;
+                }
                 for (int i = 0; i < num; i++)
                 {
                     if (optixLaunchParams.All_Lights[i].id == MeshId)
@@ -157,16 +162,16 @@ namespace osc
                         break;
                     }
                 }
-                prd.pixelColor = sbtData.emission*dot(Ns,-prd.nextPosition) * prd.throughout / (prd.weight + light_pdf * num);
+                prd.pixelColor = sbtData.emission * prd.throughout / (prd.weight + light_pdf * num);
                 break;
             case MY_BRDF:
-                prd.pixelColor = sbtData.emission *dot(Ns, -prd.nextPosition) * prd.throughout / prd.weight;
+                prd.pixelColor = sbtData.emission  * prd.throughout / prd.weight;
                 break;
             case MY_NEE:
                 if (prd.depth > 0)
                     prd.pixelColor = vec3f(0.f);
                 else
-                    prd.pixelColor = sbtData.emission *dot(Ns, -prd.nextPosition);
+                    prd.pixelColor = sbtData.emission;
                 break;
             }
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
@@ -183,7 +188,7 @@ namespace osc
         LP->sample(LS, prd.random, lightMeshID);
 
         vec2i dir_hit = vec2i(LP->id, lightMeshID);
-        //std::printf("tracing\n");
+        //printf("tracing %f %f %f\n",LS.normal.x, LS.normal.y, LS.normal.z);
         packPointer(&dir_hit, u0, u1);
 
         vec3f lightDir = normalize(LS.position - surfPos);
