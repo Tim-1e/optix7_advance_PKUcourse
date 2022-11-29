@@ -635,7 +635,7 @@ namespace osc {
                             1
                             ));
 
-
+    //system("pause");
     denoiserIntensity.resize(sizeof(float));
 
     

@@ -176,6 +176,9 @@ namespace osc
             }
             //printf("depth %d with color %f %f %f\n", prd.depth, prd.pixelColor.x, prd.pixelColor.y, prd.pixelColor.z);
             prd.end = 1;
+            prd.depth += 1;
+            prd.eval = 1.f;
+            prd.pdf = 1.f;
             return;
         }
         prd.throughout /= prd.weight;//非光源，并入即可
@@ -217,6 +220,8 @@ namespace osc
                 break;
             case MY_NEE:
                 prd.pixelColor = Dir_color_contri / (Pdf_nee);
+                prd.eval = Dir_color_contri;
+                prd.pdf = Pdf_nee;
                 break;
             case MY_MIS:
                 prd.pixelColor = Dir_color_contri / (Pdf_nee + Pdf_brdf(sbtData, Ng, rayDir, lightDir));
@@ -294,19 +299,16 @@ namespace osc
         vec3f pixelColor = 0.f;
         vec3f pixelNormal = 0.f;
         vec3f pixelAlbedo = 0.f;
+        //float sEval[MAX_DEPTH], sBrdf[MAX_DEPTH],sColor[MAX_DEPTH];
         for (int sampleID = 0; sampleID < numPixelSamples; sampleID++)
         {
-            // normalized screen plane position, in [0,1]^2
 
-            // iw: note for denoising that's not actually correct - if we
-            // assume that the camera should only(!) cover the denoised
-            // screen then the actual screen plane we shuld be using during
-            // rendreing is slightly larger than [0,1]^2
             vec2f screen(vec2f(ix + prd.random(), iy + prd.random()) / vec2f(optixLaunchParams.frame.size));
  
             // generate ray direction
             vec3f rayDir = normalize(camera.direction + (screen.x - 0.5f) * camera.horizontal + (screen.y - 0.5f) * camera.vertical);
-            
+
+
             prd.pixelColor = vec3f(0.f);
             prd.pixelAlbedo = vec3f(0.f);
             prd.pixelNormal = vec3f(0.f);
@@ -331,7 +333,9 @@ namespace osc
             pixelColor += prd.pixelColor;
             pixelNormal += prd.pixelNormal;
             pixelAlbedo += prd.pixelAlbedo;
-
+            //sEval[prd.depth - 1] = prd.eval.x;
+            //sBrdf[prd.depth - 1] = prd.pdf.x;
+            //sColor[prd.depth - 1] = prd.pixelColor.x;
             while (!prd.end)
             {
                 // ray bounce
@@ -348,8 +352,20 @@ namespace osc
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
                     pixelColor += prd.pixelColor;
+                    //sEval[prd.depth - 1] = prd.eval.x;
+                    //sBrdf[prd.depth - 1] = prd.pdf.x;
+                    //sColor[prd.depth - 1] = prd.pixelColor.x;
             }
         }
+        pixelColor = clamp(pixelColor,vec3f(0.f), vec3f(100.f));
+        /*if (pixelColor.x > 1000.f) {
+            printf("%d %d: color is %f with depth %d\n", ix,iy,pixelColor.x,prd.depth);
+            for (int i = 0; i < prd.depth; i++)
+            {
+                printf("%d %d: depth %d with contri %f pdf %f color %f\n", ix, iy, i, sEval[i],sBrdf[i],sColor[i]);
+            }
+        }*/
+
 
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
         vec4f albedo(pixelAlbedo / numPixelSamples, 1.f);

@@ -17,6 +17,8 @@ namespace osc {
         vec3f  sourcePos;
         vec3f nextPosition;
         vec3f weight;
+        vec3f pdf;
+        vec3f eval;
         bool end;
         BDPTVertex* vertexs;
 
