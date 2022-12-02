@@ -25,20 +25,7 @@ using namespace osc;
 namespace osc
 {
 
-    /*! launch parameters in constant memory, filled in by optix upon
-        optixLaunch (this gets filled in from the buffer we pass to
-        optixLaunch) */
     extern "C" __constant__ LaunchParams optixLaunchParams;
-
-    //------------------------------------------------------------------------------
-    // closest hit and anyhit programs for radiance-type rays.
-    //
-    // Note eventually we will have to create one pair of those for each
-    // ray type and each geometry type we want to render; but this
-    // simple example doesn't use any actual geometries yet, so we only
-    // create a single, dummy, set of them (we do have to have at least
-    // one group of them to set up the SBT)
-    //------------------------------------------------------------------------------
 
     extern "C" __global__ void __closesthit__shadow()
     {
@@ -67,10 +54,6 @@ namespace osc
         const float u = optixGetTriangleBarycentrics().x;
         const float v = optixGetTriangleBarycentrics().y;
 
-        // ------------------------------------------------------------------
-        // compute normal, using either shading normal (if avail), or
-        // geometry normal (fallback)
-        // ------------------------------------------------------------------
         const vec3f &A = sbtData.vertex[index.x];
         const vec3f &B = sbtData.vertex[index.y];
         const vec3f &C = sbtData.vertex[index.z];
@@ -79,18 +62,11 @@ namespace osc
                        ? ((1.f - u - v) * sbtData.normal[index.x] + u * sbtData.normal[index.y] + v * sbtData.normal[index.z])
                        : Ng;
 
-        // ------------------------------------------------------------------
-        // face-forward and normalize normals
-        // ------------------------------------------------------------------
         const vec3f rayDir = optixGetWorldRayDirection();
         
         if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
         Ng = normalize(Ng);
 
-        // ------------------------------------------------------------------
-        // compute diffuse material color, including diffuse texture, if
-        // available
-        // ------------------------------------------------------------------
         vec3f diffuseColor = sbtData.color;
         if (sbtData.hasTexture && sbtData.texcoord)
         {
@@ -108,12 +84,6 @@ namespace osc
             specColor = (vec3f)fromTexture;
         }
 
-        //const float alpha = sbtData.alpha_;
-        //const float d = sbtData.d;
-
-        // ------------------------------------------------------------------
-        // compute shadow
-        // ------------------------------------------------------------------
         const vec3f surfPos = (1.f - u - v) * sbtData.vertex[index.x] + u * sbtData.vertex[index.y] + v * sbtData.vertex[index.z];
 
         const float RR = 0.8f;//俄罗斯轮盘赌
@@ -121,11 +91,6 @@ namespace osc
         M_extansion mext;
         mext.diffuseColor = diffuseColor;
         mext.specColor = specColor;//材质属性
-
-        if (prd.random() > RR) {
-            prd.end = 1;
-            return;
-        }
         
         if (sbtData.emissive_) {
             prd.end = 1;
@@ -135,6 +100,7 @@ namespace osc
             }
             prd.path->vertexs[prd.depth].init(surfPos, Ng, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
             prd.path->length = prd.depth + 1;
+            //prd.lightColor = evalPath(*prd.path,0);
             prd.lightColor = singlePathContriCompute(*prd.path);
             prd.TouchtheLight = 1;
             return;
@@ -151,6 +117,12 @@ namespace osc
         prd.normal = Ng;
         prd.sourcePos = surfPos;
         prd.direction = mont_dir;
+
+        if (prd.random() > RR) {
+            prd.end = 1;
+            return;
+        }
+
         return;
     }
 
@@ -161,14 +133,6 @@ namespace osc
     extern "C" __global__ void __anyhit__shadow()
     { /*! not going to be used */
     }
-
-    //------------------------------------------------------------------------------
-    // miss program that gets called for any ray that did not have a
-    // valid intersection
-    //
-    // as with the anyhit/closest hit programs, in this example we only
-    // need to have _some_ dummy function to set up a valid SBT
-    // ------------------------------------------------------------------------------
 
     extern "C" __global__ void __miss__radiance()
     {
@@ -245,9 +209,6 @@ namespace osc
             *lightPathNum = light_path.length;
     }
 
-    //------------------------------------------------------------------------------
-    // ray gen program - the actual rendering happens in here
-    //------------------------------------------------------------------------------
     extern "C" __global__ void __raygen__renderFrame()
     {
         const int ix = optixGetLaunchIndex().x;
@@ -325,11 +286,8 @@ namespace osc
             }
             //if (prd.TouchtheLight) {
             //    pixelColor += prd.lightColor;
-            //    continue;
             //}
-            //continue;
-
-
+            // 
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
             //float pdf = 1.f;
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
@@ -337,44 +295,43 @@ namespace osc
                 int light_choose = int(prd.random()* LightRayGenerateNum * LightRayGenerateNum);
                 int length = optixLaunchParams.lightPathNum[light_choose];
                 int length_choose = int(prd.random() * length)+1;
+                vec3f turnColor;
 
-                //printf("%d\n", light_choose);
                 light_path.vertexs = optixLaunchParams.lightPath + light_choose * Maxdepth;
                 light_path.length = length_choose;
-                for (int light_length = light_path.length; light_length <= light_path.length; light_length++)
+                int light_length = length_choose;
+                //可见性判断
+                vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
+                vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
+                vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
+                vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
+                packPointer(&dir_hit, u0, u1);
+                optixTrace(optixLaunchParams.traversable,
+                    eyeLastPoint ,
+                    lightDir,
+                    1e-5f,    // tmin
+                    1e20f,  // tmax
+                    0.0f,   // rayTime
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+                    SHADOW_RAY_TYPE,            // SBT offset
+                    RAY_TYPE_COUNT,               // SBT stride
+                    SHADOW_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+                if (dir_hit.x == -1)
                 {
-                    //可见性判断
-                    //std::printf("c_pdf %f\n", eye_path.vertexs[0].pdf);
-                    vec3f eyeLastPoint = eye_path.vertexs[eye_length - 1].position;
-                    vec3f lightLastPoint = light_path.vertexs[light_length - 1].position;
-                    vec3f lightDir = normalize(lightLastPoint - eyeLastPoint);
-                    //std::printf("initing connection\n");
-                    vec2i dir_hit = vec2i(light_path.vertexs[light_length - 1].mat->ID, light_path.vertexs[light_length - 1].MeshID);
-                    //std::printf("tracing\n");
-                    packPointer(&dir_hit, u0, u1);
-                    optixTrace(optixLaunchParams.traversable,
-                        eyeLastPoint ,
-                        lightDir,
-                        1e-5f,    // tmin
-                        1e20f,  // tmax
-                        0.0f,   // rayTime
-                        OptixVisibilityMask(255),
-                        OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                        SHADOW_RAY_TYPE,            // SBT offset
-                        RAY_TYPE_COUNT,               // SBT stride
-                        SHADOW_RAY_TYPE,            // missSBTIndex 
-                        u0, u1);
-                    if (dir_hit.x == -1)
-                    {
-                        Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
-                        pixelColor += evalPath(connect_path) * length;
-                    }
+                    Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
+                    turnColor = evalPath(connect_path,1) * length;
+                    pixelColor += turnColor;
+                    //if (turnColor.x > 1000.f) {
+                    //    printf("%d %d eyepath %d with lightpath %d and length %d with color %f\n", ix, iy, eye_length, light_choose, length_choose, turnColor.x);
+                    //    evalPathTest(connect_path, ix, iy);
+                    //}
                 }
             }
         }
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
 
-        // and write/accumulate to frame buffer ...
         if (optixLaunchParams.frame.frameID > 0)
         {
             rgba += float(optixLaunchParams.frame.frameID) * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);
