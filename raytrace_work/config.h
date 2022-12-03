@@ -3,6 +3,7 @@
 # define VISUALIZE true
 # define OFFSCREEN false
 # define WindowsScale vec2i(1200,800)
+
 # define DOWNLOAD_RAW 0
 # define DOWNLOAD_DIR "../../output/"
 

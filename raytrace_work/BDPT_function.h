@@ -21,8 +21,6 @@ namespace osc {
         }
 
         vec3f ans = contri / float(pdf);
-        //vec3f ans1 = singlePathContriCompute(path);
-        //printf("%f vs %f\n", ans.x, ans1.x);
         if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
         {
             return vec3f(0.0f);
@@ -30,27 +28,6 @@ namespace osc {
         return ans;
     }
 
-    __forceinline__ __device__ vec3f evalPathTest(const BDPTPath& path,int ix,int iy,bool lightSample)
-    {
-        float pdf = 0.0f;
-        vec3f contri;
-        contri = contriCompute(path,lightSample);
-        printf("%d %d length %d with contri %f\n", ix, iy, path.length, contri.x);
-        for (int i = 1; i < path.length - 1; i++)
-        {
-            if (i > Maxdepth || path.length - i > Maxdepth) continue;
-            float w=pdfCompute(path, i);//i表示光路径中顶点个数
-            printf("%d %d pdf %d with pdfvalue %f\n", ix, iy, i, w);
-            pdf += w;
-        }
-        //std::printf("contri:%f,length:%d,pdf:%f\n", contri.r,path.length, pdf);
-        vec3f ans = contri / float(pdf);
-        if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
-        {
-            return vec3f(0.0f);
-        }
-        return ans;
-    }
 
     __forceinline__ __device__ vec3f contriCompute(const BDPTPath& path,bool lightSample)
     {

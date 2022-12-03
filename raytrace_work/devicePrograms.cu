@@ -95,13 +95,19 @@ namespace osc
         if (sbtData.emissive_) {
             prd.end = 1;
             if (dot(Ns, -prd.direction) < 0) {
-                prd.lightColor = vec3f(0.f);
                 return;
             }
             prd.path->vertexs[prd.depth].init(surfPos, Ng, sbtData.ID, mext, primID, optixLaunchParams.matHeader);
+            int mapLight = optixLaunchParams.idToLightMap[sbtData.ID];
+            if (mapLight == -1) printf("error,wrong light\n");
+            LightParams* Lp = &optixLaunchParams.All_Lights[mapLight];
+            LightSample Light_point;
+            Lp->sample(Light_point, prd.random);
+            prd.path->vertexs[prd.depth].pdf = Light_point.pdf;
             prd.path->length = prd.depth + 1;
-            //prd.lightColor = evalPath(*prd.path,0);
-            prd.lightColor = singlePathContriCompute(*prd.path);
+            prd.lightColor = evalPath(*prd.path,0);
+            prd.path->length = prd.depth -1;
+            //prd.lightColor = singlePathContriCompute(*prd.path);
             prd.TouchtheLight = 1;
             return;
         }
@@ -175,37 +181,37 @@ namespace osc
             M_extansion ext;
             light_path.vertexs[0].init(Light_point.position, Light_point.normal, mat.ID, ext, Light_point.meshID,optixLaunchParams.matHeader);
 
-            prd.depth = 1;
-            prd.path = &light_path;
-            prd.end = 0;
-            rayDir = Lp->UniformSampleDir(Light_point.position, Light_point.normal, prd.random);
-            optixTrace(optixLaunchParams.traversable,
-                Light_point.position,
-                rayDir,
-                1e-5f,    // tmin
-                1e20f,  // tmax
-                0.0f,   // rayTime
-                OptixVisibilityMask(255),
-                OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
-                RADIANCE_RAY_TYPE,            // SBT offset
-                RAY_TYPE_COUNT,               // SBT stride
-                RADIANCE_RAY_TYPE,            // missSBTIndex 
-                u0, u1);
-            while (!prd.end)
-            {
-                optixTrace(optixLaunchParams.traversable,
-                    prd.sourcePos ,
-                    prd.direction,
-                    1e-5f,    // tmin
-                    1e20f,  // tmax
-                    0.0f,   // rayTime
-                    OptixVisibilityMask(255),
-                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-                    RADIANCE_RAY_TYPE,            // SBT offset`
-                    RAY_TYPE_COUNT,               // SBT stride
-                    RADIANCE_RAY_TYPE,            // missSBTIndex 
-                    u0, u1);
-            }
+            //prd.depth = 1;
+            //prd.path = &light_path;
+            //prd.end = 0;
+            //rayDir = Lp->UniformSampleDir(Light_point.position, Light_point.normal, prd.random);
+            //optixTrace(optixLaunchParams.traversable,
+            //    Light_point.position,
+            //    rayDir,
+            //    1e-5f,    // tmin
+            //    1e20f,  // tmax
+            //    0.0f,   // rayTime
+            //    OptixVisibilityMask(255),
+            //    OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
+            //    RADIANCE_RAY_TYPE,            // SBT offset
+            //    RAY_TYPE_COUNT,               // SBT stride
+            //    RADIANCE_RAY_TYPE,            // missSBTIndex 
+            //    u0, u1);
+            //while (!prd.end)
+            //{
+            //    optixTrace(optixLaunchParams.traversable,
+            //        prd.sourcePos ,
+            //        prd.direction,
+            //        1e-5f,    // tmin
+            //        1e20f,  // tmax
+            //        0.0f,   // rayTime
+            //        OptixVisibilityMask(255),
+            //        OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+            //        RADIANCE_RAY_TYPE,            // SBT offset`
+            //        RAY_TYPE_COUNT,               // SBT stride
+            //        RADIANCE_RAY_TYPE,            // missSBTIndex 
+            //        u0, u1);
+            //}
             *lightPathNum = light_path.length;
     }
 
@@ -287,7 +293,7 @@ namespace osc
             //if (prd.TouchtheLight) {
             //    pixelColor += prd.lightColor;
             //}
-            // 
+
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
             //float pdf = 1.f;
             for (int eye_length = 2; eye_length <= eye_path.length; eye_length++)
@@ -323,15 +329,12 @@ namespace osc
                     Connect_two_path(eye_path, light_path, connect_path, eye_length, light_length);
                     turnColor = evalPath(connect_path,1) * length;
                     pixelColor += turnColor;
-                    //if (turnColor.x > 1000.f) {
-                    //    printf("%d %d eyepath %d with lightpath %d and length %d with color %f\n", ix, iy, eye_length, light_choose, length_choose, turnColor.x);
-                    //    evalPathTest(connect_path, ix, iy);
-                    //}
                 }
             }
         }
         vec4f rgba(pixelColor / numPixelSamples, 1.f);
-
+         //rgba=clamp(rgba, vec4f(0.f), vec4f(100.f));
+        
         if (optixLaunchParams.frame.frameID > 0)
         {
             rgba += float(optixLaunchParams.frame.frameID) * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);

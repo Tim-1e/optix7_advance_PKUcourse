@@ -132,6 +132,7 @@ namespace osc {
 
     /* lights */
     CUDABuffer All_LightBuffer;
+    CUDABuffer idToLightMapBuffer;
 
     /*Material*/
     CUDABuffer MaterialBuffer;

@@ -25,7 +25,7 @@ namespace osc {
                  const Camera &camera,
                  const  std::vector<LightParams> light,
                  const float worldScale)
-      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale,WindowsScale, FIXED_CAMERA, VISIBLE_MOUSE),
+      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale,WindowsScale, VISIBLE_MOUSE),
         sample(model,light)
     {
       sample.setCamera(camera);
@@ -273,7 +273,7 @@ namespace osc {
         std::vector<LightParams> All_Lights;
 
         Model* model = loadOBJ(
-            "../../models/threemirror.obj", All_Lights
+            "../../models/onemirror.obj", All_Lights
         );
         Camera threemirror_camera = { /*from*/vec3f(7.55735,11.741,-6.49642),
             /* at */vec3f(-163.544,-301.196,172.938),
@@ -281,7 +281,7 @@ namespace osc {
         Camera onemirror_camera = { /*from*/vec3f(-2.41854, 9.48831, 5.85088),
             /* at */vec3f(145.705, -242.668, -265.953),
             /* up */vec3f(0.f,1.f,0.f) };
-        Camera camera = threemirror_camera;
+        Camera camera = onemirror_camera;
 
       const float worldScale = length(model->bounds.span());
 

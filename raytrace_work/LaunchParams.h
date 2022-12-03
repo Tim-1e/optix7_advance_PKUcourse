@@ -50,6 +50,7 @@ namespace osc {
     } camera;
 
     LightParams* All_Lights;
+    int* idToLightMap;
     int Lights_num;
 
     BDPTVertex* eyePath; 

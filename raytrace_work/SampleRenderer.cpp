@@ -64,17 +64,25 @@ namespace osc {
   void SampleRenderer::createLight(std::vector<LightParams> lights)
   {
       const int numMeshes = (int)model->meshes.size();
+      std::vector<int> Map;
       for (int meshID = 0; meshID < numMeshes; meshID++) {
           TriangleMesh& mesh = *model->meshes[meshID];
-          if (!mesh.emissive_) continue;
+          if (!mesh.emissive_) {
+             Map.push_back(-1);
+             continue;
+          }
+          Map.push_back(lights.size());
           LightParams triangle_light(TRIANGLE, meshID);
           triangle_light.initTriangleLight((vec3f*)vertexBuffer[meshID].d_pointer(),(vec3i*)indexBuffer[meshID].d_pointer(),mesh.emission, mesh.index.size());
           lights.push_back(triangle_light);
       }
       //std::cout << lights.size()<<std::endl;
       All_LightBuffer.alloc_and_upload(lights);
+      idToLightMapBuffer.alloc_and_upload(Map);
+
       launchParams.All_Lights =(LightParams*) All_LightBuffer.d_pointer();
       launchParams.Lights_num = lights.size();
+      launchParams.idToLightMap = (int*)idToLightMapBuffer.d_pointer();
   }
 
   void SampleRenderer::createTextures()
