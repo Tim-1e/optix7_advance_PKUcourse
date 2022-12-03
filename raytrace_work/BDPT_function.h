@@ -8,18 +8,16 @@ namespace osc {
     
     __forceinline__ __device__ vec3f contriCompute(const BDPTPath& path,bool lightSample);
     __forceinline__ __device__ float pdfCompute(const BDPTPath& path, int lightPathLength);
-    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path);
     __forceinline__ __device__ vec3f evalPath(const BDPTPath& path, bool lightSample)
     {
         float pdf = 0.0f;
         vec3f contri;
         contri = contriCompute(path,lightSample);
-        for (int i = 1; i <path.length-1; i++)
+        for (int i = 0; i <path.length-1; i++)
         {
             if (i > Maxdepth || path.length - i > Maxdepth) continue;
             pdf += pdfCompute(path, i);//i表示光路径中顶点个数
         }
-
         vec3f ans = contri / float(pdf);
         if (isnan(ans.x) || isnan(ans.y) || isnan(ans.z))
         {
@@ -64,42 +62,12 @@ namespace osc {
         return throughput;
     }
 
-    __forceinline__ __device__ vec3f singlePathContriCompute(const BDPTPath& path)
-    {
-        const float RR_RATE = 0.8f;
-        vec3f throughput = vec3f(1.0f);
-        const BDPTVertex& light = path.vertexs[path.length - 1];
-        const BDPTVertex& lastMidPoint = path.vertexs[path.length - 2];
-        vec3f lightLine = lastMidPoint.position - light.position;
-        vec3f lightDirection = normalize(lightLine);
-        float lAng = dot(light.normal, lightDirection);
-        if (lAng < 0.0f)
-        {
-            return vec3f(0.0f);
-        }
-        vec3f Le = light.mat->emission;
-        throughput *= Le;
-
-        for (int i = 1; i < path.length - 1; i++)
-        {
-            const BDPTVertex& midPoint = path.vertexs[i];
-            const BDPTVertex& lastPoint = path.vertexs[i - 1];
-            const BDPTVertex& nextPoint = path.vertexs[i + 1];
-            vec3f lastDirection = normalize(lastPoint.position - midPoint.position);
-            vec3f nextDirection = normalize(nextPoint.position - midPoint.position);
-            throughput *= abs(dot(midPoint.normal, nextDirection))
-                * Eval(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection, midPoint.ext)
-                / Pdf_brdf(*midPoint.mat, midPoint.normal, -lastDirection, nextDirection) / RR_RATE;
-        }
-        return throughput;
-    }
-
     __forceinline__ __device__ float pdfCompute(const BDPTPath& path, int lightPathLength)
     {
         int eyePathLength = path.length - lightPathLength;
         float pdf = 1.0f;
         const float RR_RATE = 0.8f;
-        const int RR_BEGIN_DEPTH = 1;
+        const int RR_BEGIN_DEPTH = 2;
         if (lightPathLength == 0) {//直击时独立计算pdf
             pdf *= pow(RR_RATE, eyePathLength - 2);
             for (int i = 1; i < eyePathLength - 1; i++)

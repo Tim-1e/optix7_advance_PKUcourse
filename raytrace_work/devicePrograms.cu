@@ -290,9 +290,9 @@ namespace osc
                     RADIANCE_RAY_TYPE,            // missSBTIndex 
                     u0, u1);
             }
-            //if (prd.TouchtheLight) {
-            //    pixelColor += prd.lightColor;
-            //}
+            if (prd.TouchtheLight) {
+                pixelColor += prd.lightColor;
+            }
 
             //float pdf = float(LightRayGenerateNum * LightRayGenerateNum) / (LightVertexNum);
             //float pdf = 1.f;
